@@ -1,6 +1,7 @@
 import React, { FunctionComponent } from 'react';
 import { useParams } from 'react-router-dom';
 import * as R from 'ramda';
+import { Connection } from '@xyflow/react';
 import { ArticleContext, TeamContext } from '../../../common/Context';
 import { useAppDispatch } from '../../../../../utils/hooks';
 import { useHelper } from '../../../../../store';
@@ -21,7 +22,6 @@ import ToolBar from '../../../common/ToolBar';
 import { isNotEmptyField } from '../../../../../utils/utils';
 import injectContextForScenario from '../ScenarioContext';
 import { fetchScenarioInjectsSimple } from '../../../../../actions/injects/inject-action';
-import {Connection} from "@xyflow/react";
 
 interface Props {
 
@@ -117,11 +117,11 @@ const ScenarioInjects: FunctionComponent<Props> = () => {
       'inject_title',
       'inject_depends_from_another',
       'inject_depends_duration',
-    ]
-    let sourceInject = injects.find((inject: Inject) => inject.inject_id === connection.source)
+    ];
+    const sourceInject = injects.find((inject: Inject) => inject.inject_id === connection.source);
     sourceInject.inject_depends_from_another = connection.target;
     await injectContext.onUpdateInject(sourceInject.inject_id, R.pick(updateFields, sourceInject));
-  }
+  };
 
   const massUpdateInjects = async (actions: { field: string, type: string, values: { value: string }[] }[]) => {
     const updateFields = [
