@@ -918,7 +918,6 @@ export interface ExpectationUpdateInput {
 
 export interface ExportMapperInput {
   ids_to_export: string[];
-  export_mapper_name?: string;
 }
 
 export interface Filter {
