@@ -64,7 +64,6 @@ export interface Article {
   /** @format date-time */
   article_virtual_publication?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ArticleCreateInput {
@@ -120,7 +119,6 @@ export interface Asset {
   /** @format date-time */
   asset_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface AssetAgentJob {
@@ -129,7 +127,6 @@ export interface AssetAgentJob {
   asset_agent_id: string;
   asset_agent_inject?: Inject;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface AssetGroup {
@@ -146,7 +143,6 @@ export interface AssetGroup {
   /** @format date-time */
   asset_group_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface AssetGroupInput {
@@ -204,7 +200,6 @@ export interface AttackPattern {
   /** @format date-time */
   attack_pattern_updated_at?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface AttackPatternCreateInput {
@@ -251,7 +246,6 @@ export interface Challenge {
   /** @format date-time */
   challenge_virtual_publication?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ChallengeCreateInput {
@@ -277,7 +271,6 @@ export interface ChallengeFlag {
   flag_updated_at?: string;
   flag_value?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ChallengeInformation {
@@ -335,7 +328,6 @@ export interface Channel {
   channel_updated_at: string;
   listened?: boolean;
   logos?: Document[];
-  updateAttributes?: object;
 }
 
 export interface ChannelCreateInput {
@@ -383,7 +375,6 @@ export interface Collector {
   /** @format date-time */
   collector_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface CollectorCreateInput {
@@ -415,7 +406,6 @@ export interface Comcheck {
   /** @format int64 */
   comcheck_users_number?: number;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ComcheckInput {
@@ -439,7 +429,6 @@ export interface ComcheckStatus {
   comcheckstatus_state?: "RUNNING" | "SUCCESS" | "FAILURE";
   comcheckstatus_user?: User;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface Communication {
@@ -461,7 +450,6 @@ export interface Communication {
   communication_to: string;
   communication_users?: User[];
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface CreateUserInput {
@@ -496,7 +484,6 @@ export interface Document {
   document_target?: string;
   document_type: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface DocumentCreateInput {
@@ -526,7 +513,6 @@ export interface DryInject {
   dryinject_inject?: Inject;
   dryinject_status?: DryInjectStatus;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface DryInjectStatus {
@@ -558,7 +544,6 @@ export interface DryInjectStatus {
   tracking_total_execution_time?: number;
   /** @format int32 */
   tracking_total_success?: number;
-  updateAttributes?: object;
 }
 
 export interface Dryrun {
@@ -578,7 +563,6 @@ export interface Dryrun {
   /** @format int64 */
   dryrun_users_number?: number;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface DryrunCreateInput {
@@ -615,7 +599,6 @@ export interface Endpoint {
   endpoint_mac_addresses?: string[];
   endpoint_platform: "Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown";
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface EndpointInput {
@@ -666,7 +649,6 @@ export interface Evaluation {
   evaluation_updated_at: string;
   evaluation_user: User;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface EvaluationInput {
@@ -685,7 +667,6 @@ export interface Executor {
   /** @format date-time */
   executor_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ExecutorCreateInput {
@@ -737,11 +718,11 @@ export interface Exercise {
   exercise_observers?: User[];
   exercise_pauses?: Pause[];
   exercise_planners?: User[];
-  exercise_platforms?: string[];
+  exercise_platforms?: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   exercise_scenario?: Scenario;
   /** @format double */
   exercise_score?: number;
-  exercise_severity?: string;
+  exercise_severity?: "low" | "medium" | "high" | "critical";
   /** @format date-time */
   exercise_start_date?: string;
   exercise_status: "SCHEDULED" | "CANCELED" | "RUNNING" | "PAUSED" | "FINISHED";
@@ -756,7 +737,6 @@ export interface Exercise {
   /** @format int64 */
   exercise_users_number?: number;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ExerciseCreateInput {
@@ -834,10 +814,6 @@ export interface ExerciseDetails {
   exercise_users?: string[];
   /** @format int64 */
   exercise_users_number?: number;
-}
-
-export interface ExerciseLessonsInput {
-  exercise_lessons_anonymized?: boolean;
 }
 
 export interface ExerciseSimple {
@@ -924,7 +900,19 @@ export interface ExportMapperInput {
 export interface Filter {
   key: string;
   mode?: "and" | "or";
-  operator?: "eq" | "not_eq" | "contains" | "not_contains" | "starts_with" | "not_starts_with";
+  operator?:
+    | "eq"
+    | "not_eq"
+    | "contains"
+    | "not_contains"
+    | "starts_with"
+    | "not_starts_with"
+    | "gt"
+    | "gte"
+    | "lt"
+    | "lte"
+    | "empty"
+    | "not_empty";
   values?: string[];
 }
 
@@ -960,7 +948,6 @@ export interface Grant {
   grant_name: "OBSERVER" | "PLANNER";
   grant_scenario?: Scenario;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface Group {
@@ -978,7 +965,6 @@ export interface Group {
   group_organizations?: Organization[];
   group_users?: User[];
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface GroupCreateInput {
@@ -1011,7 +997,6 @@ export interface ImportMapper {
   /** @format date-time */
   import_mapper_updated_at?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface ImportMapperAddInput {
@@ -1095,7 +1080,6 @@ export interface Inject {
   /** @uniqueItems true */
   inject_tags?: Tag[];
   inject_teams?: Team[];
-  inject_test_status?: InjectTestStatus;
   inject_testable?: boolean;
   inject_title: string;
   inject_type?: string;
@@ -1105,7 +1089,6 @@ export interface Inject {
   /** @format int64 */
   inject_users_number?: number;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface InjectDocument {
@@ -1138,7 +1121,7 @@ export interface InjectExpectation {
   inject_expectation_description?: string;
   inject_expectation_exercise?: Exercise;
   /** @format double */
-  inject_expectation_expected_score?: number;
+  inject_expectation_expected_score: number;
   inject_expectation_group?: boolean;
   inject_expectation_id: string;
   inject_expectation_inject?: Inject;
@@ -1155,7 +1138,6 @@ export interface InjectExpectation {
   inject_expectation_user?: User;
   listened?: boolean;
   targetId?: string;
-  updateAttributes?: object;
 }
 
 export interface InjectExpectationResult {
@@ -1200,7 +1182,6 @@ export interface InjectImporter {
   /** @format date-time */
   inject_importer_updated_at?: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface InjectImporterAddInput {
@@ -1243,6 +1224,7 @@ export interface InjectOutput {
    * @min 0
    */
   inject_depends_duration: number;
+  inject_depends_on?: string;
   inject_enabled?: boolean;
   inject_exercise?: string;
   inject_id: string;
@@ -1253,7 +1235,7 @@ export interface InjectOutput {
   inject_tags?: string[];
   inject_teams?: string[];
   inject_testable?: boolean;
-  inject_title?: string;
+  inject_title: string;
   inject_type?: string;
 }
 
@@ -1265,6 +1247,7 @@ export interface InjectReceptionInput {
 export interface InjectResultDTO {
   /** Attack Patterns */
   inject_attack_patterns: AttackPattern[];
+  inject_commands_lines?: InjectStatusCommandLine;
   inject_content?: object;
   /** Description */
   inject_description: string;
@@ -1294,6 +1277,7 @@ export interface InjectResultDTO {
 
 export interface InjectStatus {
   listened?: boolean;
+  status_commands_lines?: InjectStatusCommandLine;
   status_id?: string;
   status_name:
     | "DRAFT"
@@ -1321,7 +1305,12 @@ export interface InjectStatus {
   tracking_total_execution_time?: number;
   /** @format int32 */
   tracking_total_success?: number;
-  updateAttributes?: object;
+}
+
+export interface InjectStatusCommandLine {
+  cleanup_command?: string[];
+  content?: string[];
+  external_id?: string;
 }
 
 export interface InjectStatusExecution {
@@ -1359,6 +1348,7 @@ export interface InjectTeamsInput {
 }
 
 export interface InjectTestStatus {
+  inject_id?: string;
   /** @format date-time */
   inject_test_status_created_at?: string;
   /** @format date-time */
@@ -1394,7 +1384,6 @@ export interface InjectTestStatus {
   tracking_total_execution_time?: number;
   /** @format int32 */
   tracking_total_success?: number;
-  updateAttributes?: object;
 }
 
 export interface InjectUpdateActivationInput {
@@ -1426,7 +1415,6 @@ export interface Injector {
   /** @format date-time */
   injector_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface InjectorConnection {
@@ -1455,11 +1443,19 @@ export interface InjectorContract {
   injector_contract_manual?: boolean;
   injector_contract_needs_executor?: boolean;
   injector_contract_payload?: Payload;
-  injector_contract_platforms?: string[];
+  injector_contract_platforms?: (
+    | "Linux"
+    | "Windows"
+    | "MacOS"
+    | "Container"
+    | "Service"
+    | "Generic"
+    | "Internal"
+    | "Unknown"
+  )[];
   /** @format date-time */
   injector_contract_updated_at: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface InjectorContractAddInput {
@@ -1482,7 +1478,7 @@ export interface InjectorContractInput {
   contract_id: string;
   contract_labels?: Record<string, string>;
   contract_manual?: boolean;
-  contract_platforms?: string[];
+  contract_platforms?: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   is_atomic_testing?: boolean;
 }
 
@@ -1493,7 +1489,16 @@ export interface InjectorContractOutput {
   injector_contract_injector_type?: string;
   injector_contract_labels?: Record<string, string>;
   injector_contract_payload_type?: string;
-  injector_contract_platforms?: string[];
+  injector_contract_platforms?: (
+    | "Linux"
+    | "Windows"
+    | "MacOS"
+    | "Container"
+    | "Service"
+    | "Generic"
+    | "Internal"
+    | "Unknown"
+  )[];
 }
 
 export interface InjectorContractUpdateInput {
@@ -1570,7 +1575,6 @@ export interface KillChainPhase {
   phase_stix_id?: string;
   /** @format date-time */
   phase_updated_at: string;
-  updateAttributes?: object;
 }
 
 export interface KillChainPhaseCreateInput {
@@ -1609,7 +1613,6 @@ export interface LessonsAnswer {
   lessons_answer_user?: User;
   lessonsanswer_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsAnswerCreateInput {
@@ -1635,7 +1638,6 @@ export interface LessonsCategory {
   lessons_category_users?: string[];
   lessonscategory_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsCategoryCreateInput {
@@ -1656,6 +1658,10 @@ export interface LessonsCategoryUpdateInput {
   lessons_category_order?: number;
 }
 
+export interface LessonsInput {
+  lessons_anonymized?: boolean;
+}
+
 export interface LessonsQuestion {
   lessons_question_answers?: LessonsAnswer[];
   lessons_question_category: LessonsCategory;
@@ -1666,11 +1672,11 @@ export interface LessonsQuestion {
   lessons_question_explanation?: string;
   /** @format int32 */
   lessons_question_order?: number;
+  lessons_question_scenario?: string;
   /** @format date-time */
   lessons_question_updated_at: string;
   lessonsquestion_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsQuestionCreateInput {
@@ -1701,7 +1707,6 @@ export interface LessonsTemplate {
   lessons_template_updated_at: string;
   lessonstemplate_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsTemplateCategory {
@@ -1717,7 +1722,6 @@ export interface LessonsTemplateCategory {
   lessons_template_category_updated_at: string;
   lessonstemplatecategory_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsTemplateCategoryInput {
@@ -1744,7 +1748,6 @@ export interface LessonsTemplateQuestion {
   lessons_template_question_updated_at: string;
   lessonstemplatequestion_id: string;
   listened?: boolean;
-  updateAttributes?: object;
 }
 
 export interface LessonsTemplateQuestionInput {
@@ -1767,7 +1770,6 @@ export interface Log {
   /** @format date-time */
   log_updated_at: string;
   log_user?: User;
-  updateAttributes?: object;
 }
 
 export interface LogCreateInput {
@@ -1795,7 +1797,6 @@ export interface Mitigation {
   mitigation_threat_hunting_techniques?: string;
   /** @format date-time */
   mitigation_updated_at: string;
-  updateAttributes?: object;
 }
 
 export interface MitigationCreateInput {
@@ -1841,7 +1842,6 @@ export interface Objective {
   objective_title?: string;
   /** @format date-time */
   objective_updated_at: string;
-  updateAttributes?: object;
 }
 
 export interface ObjectiveInput {
@@ -1849,6 +1849,11 @@ export interface ObjectiveInput {
   /** @format int32 */
   objective_priority?: number;
   objective_title?: string;
+}
+
+export interface Option {
+  id?: string;
+  label?: string;
 }
 
 export interface Organization {
@@ -1865,7 +1870,6 @@ export interface Organization {
   organization_tags?: Tag[];
   /** @format date-time */
   organization_updated_at: string;
-  updateAttributes?: object;
 }
 
 export interface OrganizationCreateInput {
@@ -2000,6 +2004,25 @@ export interface PageGroup {
 
 export interface PageInjectResultDTO {
   content?: InjectResultDTO[];
+  empty?: boolean;
+  first?: boolean;
+  last?: boolean;
+  /** @format int32 */
+  number?: number;
+  /** @format int32 */
+  numberOfElements?: number;
+  pageable?: PageableObject;
+  /** @format int32 */
+  size?: number;
+  sort?: SortObject[];
+  /** @format int64 */
+  totalElements?: number;
+  /** @format int32 */
+  totalPages?: number;
+}
+
+export interface PageInjectTestStatus {
+  content?: InjectTestStatus[];
   empty?: boolean;
   first?: boolean;
   last?: boolean;
@@ -2303,7 +2326,6 @@ export interface Pause {
   /** @format int64 */
   pause_duration?: number;
   pause_exercise?: Exercise;
-  updateAttributes?: object;
 }
 
 export interface Payload {
@@ -2320,16 +2342,15 @@ export interface Payload {
   payload_external_id?: string;
   payload_id: string;
   payload_name: string;
-  payload_platforms?: string[];
+  payload_platforms?: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   payload_prerequisites?: PayloadPrerequisite[];
-  payload_source?: string;
-  payload_status?: string;
+  payload_source?: "COMMUNITY" | "FILIGRAN" | "MANUAL";
+  payload_status?: "UNVERIFIED" | "VERIFIED";
   /** @uniqueItems true */
   payload_tags?: Tag[];
   payload_type?: string;
   /** @format date-time */
   payload_updated_at: string;
-  updateAttributes?: object;
 }
 
 export interface PayloadArgument {
@@ -2351,7 +2372,7 @@ export interface PayloadCreateInput {
   payload_cleanup_executor?: string;
   payload_description?: string;
   payload_name: string;
-  payload_platforms: string[];
+  payload_platforms: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   payload_prerequisites?: PayloadPrerequisite[];
   payload_source: string;
   payload_status: string;
@@ -2378,7 +2399,7 @@ export interface PayloadUpdateInput {
   payload_cleanup_executor?: string;
   payload_description?: string;
   payload_name: string;
-  payload_platforms?: string[];
+  payload_platforms?: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   payload_prerequisites?: PayloadPrerequisite[];
   payload_tags?: string[];
 }
@@ -2417,6 +2438,7 @@ export interface PlatformSettings {
   java_version?: string;
   map_tile_server_dark?: string;
   map_tile_server_light?: string;
+  platform_agent_url?: string;
   platform_ai_enabled?: boolean;
   platform_ai_has_token?: boolean;
   platform_ai_model?: string;
@@ -2474,7 +2496,9 @@ export interface PolicyInput {
 }
 
 export interface PropertySchemaDTO {
+  schema_property_has_dynamic_value?: boolean;
   schema_property_name: string;
+  schema_property_type: string;
   schema_property_type_array?: boolean;
   schema_property_values?: string[];
 }
@@ -2580,7 +2604,7 @@ export interface RawPaginationScenario {
   /** @uniqueItems true */
   scenario_platforms?: string[];
   scenario_recurrence?: string;
-  scenario_severity?: string;
+  scenario_severity?: "low" | "medium" | "high" | "critical";
   /** @uniqueItems true */
   scenario_tags?: string[];
   /** @format date-time */
@@ -2622,48 +2646,44 @@ export interface RenewTokenInput {
 export interface Report {
   listened?: boolean;
   /** @format date-time */
-  report_created_at?: string;
-  report_description?: string;
+  report_created_at: string;
   report_exercise?: Exercise;
-  report_general_information?: boolean;
-  report_id?: string;
-  report_lessons_details?: boolean;
-  report_lessons_objectives?: boolean;
-  report_lessons_stats?: boolean;
-  report_name?: string;
-  report_stats_data?: boolean;
-  report_stats_definition?: boolean;
-  report_stats_definition_score?: boolean;
-  report_stats_results?: boolean;
+  report_global_observation?: string;
+  report_id: string;
+  report_informations?: ReportInformation[];
+  report_name: string;
   /** @format date-time */
-  report_updated_at?: string;
-  updateAttributes?: object;
+  report_updated_at: string;
 }
 
-export interface ReportCreateInput {
-  report_description?: string;
-  report_general_information?: boolean;
-  report_lessons_details?: boolean;
-  report_lessons_objectives?: boolean;
-  report_lessons_stats?: boolean;
-  report_name: string;
-  report_stats_data?: boolean;
-  report_stats_definition?: boolean;
-  report_stats_definition_score?: boolean;
-  report_stats_results?: boolean;
+export interface ReportInformation {
+  id: string;
+  listened?: boolean;
+  report: Report;
+  report_informations_display?: boolean;
+  report_informations_type:
+    | "MAIN_INFORMATION"
+    | "SCORE_DETAILS"
+    | "INJECT_RESULT"
+    | "GLOBAL_OBSERVATION"
+    | "PLAYER_SURVEYS"
+    | "EXERCISE_DETAILS";
 }
 
-export interface ReportUpdateInput {
-  report_description?: string;
-  report_general_information?: boolean;
-  report_lessons_details?: boolean;
-  report_lessons_objectives?: boolean;
-  report_lessons_stats?: boolean;
+export interface ReportInformationInput {
+  report_informations_display: boolean;
+  report_informations_type:
+    | "MAIN_INFORMATION"
+    | "SCORE_DETAILS"
+    | "INJECT_RESULT"
+    | "GLOBAL_OBSERVATION"
+    | "PLAYER_SURVEYS"
+    | "EXERCISE_DETAILS";
+}
+
+export interface ReportInput {
+  report_informations?: ReportInformationInput[];
   report_name: string;
-  report_stats_data?: boolean;
-  report_stats_definition?: boolean;
-  report_stats_definition_score?: boolean;
-  report_stats_results?: boolean;
 }
 
 export interface ResetUserInput {
@@ -2688,7 +2708,6 @@ export interface RuleAttribute {
   rule_attribute_name: string;
   /** @format date-time */
   rule_attribute_updated_at?: string;
-  updateAttributes?: object;
 }
 
 export interface RuleAttributeAddInput {
@@ -2725,6 +2744,7 @@ export interface Scenario {
   scenario_injects?: Inject[];
   scenario_injects_statistics?: Record<string, number>;
   scenario_kill_chain_phases?: KillChainPhase[];
+  scenario_lessons_anonymized?: boolean;
   scenario_lessons_categories?: LessonsCategory[];
   scenario_mail_from: string;
   scenario_mails_reply_to?: string[];
@@ -2734,13 +2754,13 @@ export interface Scenario {
   scenario_name: string;
   scenario_observers?: User[];
   scenario_planners?: User[];
-  scenario_platforms?: string[];
+  scenario_platforms?: ("Linux" | "Windows" | "MacOS" | "Container" | "Service" | "Generic" | "Internal" | "Unknown")[];
   scenario_recurrence?: string;
   /** @format date-time */
   scenario_recurrence_end?: string;
   /** @format date-time */
   scenario_recurrence_start?: string;
-  scenario_severity?: string;
+  scenario_severity?: "low" | "medium" | "high" | "critical";
   scenario_subtitle?: string;
   /** @uniqueItems true */
   scenario_tags?: Tag[];
@@ -2751,7 +2771,6 @@ export interface Scenario {
   scenario_users?: User[];
   /** @format int64 */
   scenario_users_number?: number;
-  updateAttributes?: object;
 }
 
 export interface ScenarioInformationInput {
@@ -2820,13 +2839,13 @@ export interface SearchPaginationInput {
    * @format int32
    * @min 0
    */
-  page?: number;
+  page: number;
   /**
    * Element number by page
    * @format int32
    * @max 1000
    */
-  size?: number;
+  size: number;
   /** List of sort fields : a field is composed of a property (for instance "label" and an optional direction ("asc" is assumed if no direction is specified) : ("desc", "asc") */
   sorts?: SortField[];
   /** Text to search within searchable attributes */
@@ -2863,7 +2882,6 @@ export interface SecurityPlatform {
   security_platform_logo_dark?: Document;
   security_platform_logo_light?: Document;
   security_platform_type: "EDR" | "XDR" | "SIEM" | "SOAR" | "NDR" | "ISPM";
-  updateAttributes?: object;
 }
 
 export interface SecurityPlatformInput {
@@ -2929,7 +2947,6 @@ export interface Tag {
   tag_color?: string;
   tag_id: string;
   tag_name: string;
-  updateAttributes?: object;
 }
 
 export interface TagCreateInput {
@@ -2977,7 +2994,6 @@ export interface Team {
   team_users?: User[];
   /** @format int64 */
   team_users_number?: number;
-  updateAttributes?: object;
 }
 
 export interface TeamCreateInput {
@@ -3016,7 +3032,6 @@ export interface Token {
   token_id: string;
   token_user?: User;
   token_value: string;
-  updateAttributes?: object;
 }
 
 export interface UpdateAssetsOnAssetGroupInput {
@@ -3066,7 +3081,6 @@ export interface User {
   user_phone2?: string;
   injects?: Inject[];
   listened?: boolean;
-  updateAttributes?: object;
   user_admin?: boolean;
   user_city?: string;
   user_communications?: Communication[];
@@ -3121,7 +3135,6 @@ export interface ValidationErrorBag {
 
 export interface Variable {
   listened?: boolean;
-  updateAttributes?: object;
   /** @format date-time */
   variable_created_at: string;
   variable_description?: string;

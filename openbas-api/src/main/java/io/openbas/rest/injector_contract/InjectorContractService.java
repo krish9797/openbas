@@ -1,9 +1,10 @@
 package io.openbas.rest.injector_contract;
 
-import io.openbas.database.model.Collector;
-import io.openbas.database.model.Injector;
-import io.openbas.database.model.InjectorContract;
-import io.openbas.database.model.Payload;
+import io.openbas.database.model.*;
+import io.openbas.database.repository.InjectorContractRepository;
+import io.openbas.injectors.email.EmailContract;
+import io.openbas.injectors.email.EmailInjector;
+import io.openbas.injectors.ovh.OvhSmsContract;
 import io.openbas.rest.injector_contract.output.InjectorContractOutput;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -13,12 +14,16 @@ import jakarta.persistence.criteria.*;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +39,28 @@ public class InjectorContractService {
 
   @PersistenceContext
   private EntityManager entityManager;
+
+  private final InjectorContractRepository injectorContractRepository;
+
+  @Value("${openbas.xls.import.mail.enable}")
+  private boolean mailImportEnabled;
+
+  @Value("${openbas.xls.import.sms.enable}")
+  private boolean smsImportEnabled;
+
+  @EventListener(ApplicationReadyEvent.class)
+  public void initImportAvailableOnStartup() {
+    List<String> listOfInjectorImportAvailable = new ArrayList<>();
+    if (mailImportEnabled) listOfInjectorImportAvailable.addAll(Arrays.asList(EmailContract.EMAIL_GLOBAL, EmailContract.EMAIL_DEFAULT));
+    if (smsImportEnabled) listOfInjectorImportAvailable.add(OvhSmsContract.OVH_DEFAULT);
+
+    List<InjectorContract> listInjectorContract = new ArrayList<>();
+    injectorContractRepository.findAll().spliterator().forEachRemaining(listInjectorContract::add);
+    listInjectorContract.forEach(injectorContract -> {
+        injectorContract.setImportAvailable(listOfInjectorImportAvailable.contains(injectorContract.getId()));
+    });
+    injectorContractRepository.saveAll(listInjectorContract);
+  }
 
   public Page<InjectorContractOutput> injectorContracts(
       @Nullable final Specification<InjectorContract> specification,
@@ -115,7 +142,7 @@ public class InjectorContractService {
             tuple.get("injector_contract_id", String.class),
             tuple.get("injector_contract_labels", Map.class),
             tuple.get("injector_contract_content", String.class),
-            tuple.get("injector_contract_platforms", String[].class),
+            tuple.get("injector_contract_platforms", Endpoint.PLATFORM_TYPE[].class),
             tuple.get("payload_type", String.class),
             tuple.get("collector_type", String.class),
             tuple.get("injector_contract_injector_type", String.class),

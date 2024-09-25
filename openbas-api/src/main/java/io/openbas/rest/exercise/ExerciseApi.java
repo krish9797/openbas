@@ -379,9 +379,9 @@ public class ExerciseApi extends RestBehavior {
     @PreAuthorize("isExercisePlanner(#exerciseId)")
     @Transactional(rollbackOn = Exception.class)
     public Exercise updateExerciseLessons(@PathVariable String exerciseId,
-                                          @Valid @RequestBody ExerciseLessonsInput input) {
+                                          @Valid @RequestBody LessonsInput input) {
         Exercise exercise = exerciseRepository.findById(exerciseId).orElseThrow(ElementNotFoundException::new);
-        exercise.setLessonsAnonymized(input.getLessonsAnonymized());
+        exercise.setLessonsAnonymized(input.isLessonsAnonymized());
         return exerciseRepository.save(exercise);
     }
 
@@ -644,14 +644,14 @@ public class ExerciseApi extends RestBehavior {
     public Page<ExerciseSimple> exercises(@RequestBody @Valid final SearchPaginationInput searchPaginationInput) {
         if (currentUser().isAdmin()) {
             return buildPaginationCriteriaBuilder(
-                    this.exerciseService::exercises,
+                this.exerciseService::exercises,
                     searchPaginationInput,
                     Exercise.class
             );
         } else {
             return buildPaginationCriteriaBuilder(
                     (Specification<Exercise> specification, Pageable pageable) -> this.exerciseService.exercises(
-                            findGrantedFor(currentUser().getId()).and(specification),
+                        findGrantedFor(currentUser().getId()).and(specification),
                             pageable
                     ),
                     searchPaginationInput,

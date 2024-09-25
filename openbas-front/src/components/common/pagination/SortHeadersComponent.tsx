@@ -44,6 +44,9 @@ interface Props {
   defaultSortAsc?: boolean;
 }
 
+/**
+ * @deprecated Need to migrate to the new pagination system: SortHeadersComponentV2
+ */
 const SortHeadersComponent: FunctionComponent<Props> = ({
   headers,
   inlineStylesHeaders,
@@ -94,11 +97,9 @@ const SortHeadersComponent: FunctionComponent<Props> = ({
   };
 
   return (
-    <>
-      <div className={classes.headerItems}>
-        {headers.map((header: Header) => (sortHeader(header, inlineStylesHeaders[header.field])))}
-      </div>
-    </>
+    <div className={classes.headerItems}>
+      {headers.map((header: Header) => (sortHeader(header, inlineStylesHeaders[header.field])))}
+    </div>
   );
 };
 

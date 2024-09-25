@@ -4,12 +4,16 @@ import { List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui
 import type { InjectTestStatus, SearchPaginationInput } from '../../../utils/api-types';
 import { useFormatter } from '../../../components/i18n';
 import ItemStatus from '../../../components/ItemStatus';
-import { initSorting } from '../../../components/common/pagination/Page';
+import { Page } from '../../../components/common/queryable/Page';
 import SortHeadersComponent from '../../../components/common/pagination/SortHeadersComponent';
 import InjectIcon from '../common/injects/InjectIcon';
 import { isNotEmptyField } from '../../../utils/utils';
 import Empty from '../../../components/Empty';
 import InjectTestDetail from './InjectTestDetail';
+import PaginationComponent from '../../../components/common/pagination/PaginationComponent';
+import { buildSearchPagination } from '../../../components/common/queryable/QueryableUtils';
+import InjectTestPopover from './InjectTestPopover';
+import InjectTestReplayAll from './InjectTestReplayAll';
 
 const useStyles = makeStyles(() => ({
   bodyItems: {
@@ -50,7 +54,7 @@ const inlineStyles: Record<string, CSSProperties> = {
 };
 
 interface Props {
-  searchInjectTests: (exerciseOrScenarioId: string) => Promise<{ data: InjectTestStatus[] }>;
+  searchInjectTests: (exerciseOrScenarioId: string, input: SearchPaginationInput) => Promise<{ data: Page<InjectTestStatus> }>;
   searchInjectTest: (testId: string) => Promise<{ data: InjectTestStatus }>;
   exerciseOrScenarioId: string;
   statusId: string | undefined;
@@ -81,7 +85,7 @@ const InjectTestList: FunctionComponent<Props> = ({
   const headers = [
     {
       field: 'inject_title',
-      label: 'Inject Title',
+      label: 'Inject title',
       isSortable: true,
       value: (test: InjectTestStatus) => test.inject_title,
     },
@@ -93,7 +97,7 @@ const InjectTestList: FunctionComponent<Props> = ({
     },
     {
       field: 'status_name',
-      label: 'Status',
+      label: 'Test status',
       isSortable: true,
       value: (test: InjectTestStatus) => {
         return (<ItemStatus isInject={true} status={test.status_name} label={t(test.status_name)} variant="inList" />);
@@ -103,24 +107,23 @@ const InjectTestList: FunctionComponent<Props> = ({
 
   // Filter and sort hook
   const [tests, setTests] = useState<InjectTestStatus[] | null>([]);
-  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>({
-    sorts: initSorting('inject_title'),
-  });
-
-  // Fetch tests list
-  useEffect(() => {
-    searchInjectTests(exerciseOrScenarioId).then((result: { data: InjectTestStatus[] }) => {
-      setTests(result.data);
-    });
-  }, []);
+  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>(buildSearchPagination({}));
 
   return (
     <>
-      <List>
+      <PaginationComponent
+        fetch={(input) => searchInjectTests(exerciseOrScenarioId, input)}
+        searchPaginationInput={searchPaginationInput}
+        setContent={setTests}
+      >
+        <InjectTestReplayAll injectIds={tests?.map((test: InjectTestStatus) => test.inject_id!)} onTest={(result) => setTests(result)} />
+      </PaginationComponent>
+      <List style={{ marginTop: 40 }}>
         <ListItem
           classes={{ root: classes.itemHead }}
           divider={false}
           style={{ paddingTop: 0 }}
+          secondaryAction={<>&nbsp;</>}
         >
           <ListItemIcon />
           <ListItemText
@@ -141,10 +144,19 @@ const InjectTestList: FunctionComponent<Props> = ({
               key={test.status_id}
               classes={{ root: classes.item }}
               divider
+              secondaryAction={
+                <InjectTestPopover
+                  injectTestStatus={test}
+                  onTest={(result) => setTests(tests?.map((existing) => (existing.status_id !== result.status_id ? existing : result)))}
+                  onDelete={(result) => setTests(tests.filter((existing) => (existing.status_id !== result)))}
+                />
+              }
+              disablePadding
             >
               <ListItemButton
                 classes={{ root: classes.item }}
                 onClick={() => setSelectedTest(test)}
+                selected={test.status_id === selectedTest?.status_id}
               >
                 <ListItemIcon>
                   <InjectIcon

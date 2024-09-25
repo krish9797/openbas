@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.openbas.database.model.Endpoint.ENDPOINT_TYPE;
+import static io.openbas.database.specification.InjectSpecification.VALID_TESTABLE_TYPES;
 import static java.time.Instant.now;
 import static java.util.Optional.ofNullable;
 
@@ -52,7 +53,7 @@ public class Inject implements Base, Injection {
   private String id;
 
   @Getter
-  @Queryable(searchable = true, filterable = true, sortable = true)
+  @Queryable(filterable = true, searchable = true, sortable = true)
   @Column(name = "inject_title")
   @JsonProperty("inject_title")
   @NotBlank
@@ -79,6 +80,11 @@ public class Inject implements Base, Injection {
   private boolean enabled = true;
 
   @Getter
+  @Column(name = "inject_trigger_now_date")
+  @JsonProperty("inject_trigger_now_date")
+  private Instant triggerNowDate;
+
+  @Getter
   @Column(name = "inject_content")
   @Convert(converter = ContentConverter.class)
   @JsonProperty("inject_content")
@@ -92,7 +98,7 @@ public class Inject implements Base, Injection {
 
   @Getter
   @Column(name = "inject_updated_at")
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, sortable = true)
   @JsonProperty("inject_updated_at")
   @NotNull
   private Instant updatedAt = now();
@@ -128,11 +134,13 @@ public class Inject implements Base, Injection {
   @JsonProperty("inject_depends_duration")
   @NotNull
   @Min(value = 0L, message = "The value must be positive")
+  @Queryable(sortable = true)
   private Long dependsDuration;
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "inject_injector_contract")
   @JsonProperty("inject_injector_contract")
+  @Queryable(filterable = true, dynamicValues = true, path = "injectorContract.injector.id")
   private InjectorContract injectorContract;
 
   @Getter
@@ -145,14 +153,8 @@ public class Inject implements Base, Injection {
   // CascadeType.ALL is required here because inject status are embedded
   @OneToOne(mappedBy = "inject", cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonProperty("inject_status")
-  @Queryable(sortable = true, property = "name")
+  @Queryable(filterable = true, sortable = true)
   private InjectStatus status;
-
-  // Status after testing emails and sms
-  @OneToOne(mappedBy = "inject", cascade = CascadeType.ALL, orphanRemoval = true)
-  @JsonProperty("inject_test_status")
-  @Queryable(sortable = true, property = "name")
-  private InjectTestStatus testStatus;
 
   @Getter
   @ManyToMany(fetch = FetchType.LAZY)
@@ -161,6 +163,7 @@ public class Inject implements Base, Injection {
       inverseJoinColumns = @JoinColumn(name = "tag_id"))
   @JsonSerialize(using = MultiIdSetDeserializer.class)
   @JsonProperty("inject_tags")
+  @Queryable(filterable = true, dynamicValues = true)
   private Set<Tag> tags = new HashSet<>();
 
   @Getter
@@ -281,6 +284,13 @@ public class Inject implements Base, Injection {
 
   @JsonProperty("inject_date")
   public Optional<Instant> getDate() {
+    // If a trigger now was executed for this inject linked to an exercise, we ignore pauses and we set inject inside of a range of execution
+    if(getExercise() != null && triggerNowDate != null ) {
+      Optional<Instant> exerciseStartOpt = getExercise().getStart();
+      if (exerciseStartOpt.isPresent() && (exerciseStartOpt.get().equals(triggerNowDate) || exerciseStartOpt.get().isBefore(triggerNowDate))) {
+        return Optional.of(now().minusSeconds(60));
+      }
+    }
     return InjectModelHelper.getDate(getExercise(), getScenario(), getDependsOn(), getDependsDuration());
   }
 
@@ -347,13 +357,16 @@ public class Inject implements Base, Injection {
   }
 
   @JsonProperty("inject_kill_chain_phases")
+  @Queryable(filterable = true, dynamicValues = true, path = "injectorContract.attackPatterns.killChainPhases.id")
   public List<KillChainPhase> getKillChainPhases() {
     return getInjectorContract()
         .map(injectorContract ->
-            injectorContract.getAttackPatterns().stream()
-                .flatMap(attackPattern -> attackPattern.getKillChainPhases().stream())
-                .distinct()
-                .collect(Collectors.toList())
+                injectorContract.getAttackPatterns()
+                  .stream()
+                  .flatMap(attackPattern -> attackPattern.getKillChainPhases().stream())
+                  .distinct()
+                  .collect(Collectors.toList()
+            )
         )
         .orElseGet(ArrayList::new);
   }
@@ -366,6 +379,7 @@ public class Inject implements Base, Injection {
   }
 
   @JsonProperty("inject_type")
+  @Queryable(filterable = true, path = "injectorContract.labels", clazz = Map.class)
   private String getType() {
     return getInjectorContract()
         .map(InjectorContract::getInjector)
@@ -374,20 +388,22 @@ public class Inject implements Base, Injection {
   }
 
   @JsonIgnore
+  @JsonProperty("inject_platforms")
+  @Queryable(filterable = true, path = "injectorContract.platforms", clazz = String[].class)
+  private Endpoint.PLATFORM_TYPE[] getPlatforms() {
+    return getInjectorContract()
+        .map(InjectorContract::getPlatforms)
+        .orElse(new Endpoint.PLATFORM_TYPE[0]);
+  }
+
+  @JsonIgnore
   public boolean isAtomicTesting() {
     return this.exercise == null && this.scenario == null;
   }
 
-  private static final Set<String> VALID_TYPES = new HashSet<>();
-
-  static {
-    VALID_TYPES.add("openbas_email");
-    VALID_TYPES.add("openbas_ovh_sms");
-  }
-
   @JsonProperty("inject_testable")
   public boolean getInjectTestable() {
-    return VALID_TYPES.contains(this.getType());
+    return VALID_TESTABLE_TYPES.contains(this.getType());
   }
 
   @Override
@@ -581,3 +597,4 @@ public class Inject implements Base, Injection {
     return inject;
   }
 }
+

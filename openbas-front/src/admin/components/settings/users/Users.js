@@ -13,7 +13,7 @@ import { useHelper } from '../../../../store';
 import UserPopover from './UserPopover';
 import SecurityMenu from '../SecurityMenu';
 import { useFormatter } from '../../../../components/i18n';
-import { initSorting } from '../../../../components/common/pagination/Page';
+import { initSorting } from '../../../../components/common/queryable/Page';
 import Breadcrumbs from '../../../../components/Breadcrumbs';
 import PaginationComponent from '../../../../components/common/pagination/PaginationComponent';
 import SortHeadersComponent from '../../../../components/common/pagination/SortHeadersComponent';
@@ -57,6 +57,7 @@ const inlineStyles = {
   },
   user_organization: {
     width: '15%',
+    cursor: 'default',
   },
   user_admin: {
     width: '10%',
@@ -85,7 +86,7 @@ const Users = () => {
     { field: 'user_email', label: 'Email address', isSortable: true },
     { field: 'user_firstname', label: 'Firstname', isSortable: true },
     { field: 'user_lastname', label: 'Lastname', isSortable: true },
-    { field: 'user_organization', label: 'Organization', isSortable: true },
+    { field: 'user_organization', label: 'Organization', isSortable: false },
     { field: 'user_admin', label: 'Administrator', isSortable: true },
     { field: 'user_tags', label: 'Tags', isSortable: true },
   ];

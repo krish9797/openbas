@@ -8,6 +8,9 @@ import org.springframework.data.domain.Sort;
 import javax.annotation.Nullable;
 import java.util.List;
 
+import static io.openbas.utils.schema.SchemaUtils.getSortableProperties;
+import static org.springframework.util.StringUtils.hasText;
+
 public class SortUtilsJpa {
 
   private SortUtilsJpa() {
@@ -15,7 +18,7 @@ public class SortUtilsJpa {
   }
 
   public static <T> Sort toSortJpa(@Nullable final List<SortField> sorts, @NotNull final Class<T> clazz) {
-    List<PropertySchema> propertySchemas = SchemaUtils.schema(clazz);
+    List<PropertySchema> propertySchemas = getSortableProperties(SchemaUtils.schema(clazz));
 
     List<Sort.Order> orders;
 
@@ -23,6 +26,7 @@ public class SortUtilsJpa {
       orders = List.of();
     } else {
       orders = sorts.stream()
+          .filter(s -> hasText(s.property()))
           .map(field -> {
             String property = field.property();
             Sort.Direction direction = Sort.DEFAULT_DIRECTION;
@@ -36,7 +40,7 @@ public class SortUtilsJpa {
                 .filter(p -> p.getJsonName().equals(property))
                 .findFirst()
                 .map(PropertySchema::getName)
-                .orElseThrow();
+                .orElseThrow(() -> new IllegalArgumentException("Property not sortable: " + property + " for class " + clazz));
             return new Sort.Order(direction, javaProperty);
           }).toList();
     }

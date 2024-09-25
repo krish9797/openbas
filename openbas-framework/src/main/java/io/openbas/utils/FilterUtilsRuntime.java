@@ -18,9 +18,12 @@ import static io.openbas.database.model.Filters.FilterMode.and;
 import static io.openbas.database.model.Filters.FilterMode.or;
 import static io.openbas.utils.schema.SchemaUtils.getFilterableProperties;
 import static io.openbas.utils.schema.SchemaUtils.retrieveProperty;
-import static org.springframework.util.StringUtils.hasText;
 
 public class FilterUtilsRuntime {
+
+  private FilterUtilsRuntime() {
+
+  }
 
   private static final Predicate<Object> EMPTY_PREDICATE = (value) -> true;
 
@@ -106,16 +109,7 @@ public class FilterUtilsRuntime {
       field = obj.getClass().getDeclaredField(propertySchema.getName());
       field.setAccessible(true);
 
-      // Search on child
-      if (propertySchema.isFilterable() && hasText(propertySchema.getPropertyRepresentative())) {
-        Object childObj = field.get(obj);
-        Field childField = childObj.getClass().getDeclaredField(propertySchema.getPropertyRepresentative());
-        childField.setAccessible(true);
-        currentObject = childField.get(childObj);
-        // Direct property
-      } else {
-        currentObject = field.get(obj);
-      }
+      currentObject = field.get(obj);
     } catch (NoSuchFieldException | IllegalAccessException e) {
       throw new RuntimeException(e);
     }
@@ -141,6 +135,10 @@ public class FilterUtilsRuntime {
       return OperationUtilsRuntime::startWithTexts;
     } else if (operator.equals(FilterOperator.not_eq)) {
       return OperationUtilsRuntime::notEqualsTexts;
+    } else if (operator.equals(FilterOperator.empty)) {
+      return (value, texts) -> OperationUtilsRuntime.empty(value);
+    } else if (operator.equals(FilterOperator.not_empty)) {
+      return (value, texts) -> OperationUtilsRuntime.notEmpty(value);
     } else { // Default case
       return OperationUtilsRuntime::equalsTexts;
     }

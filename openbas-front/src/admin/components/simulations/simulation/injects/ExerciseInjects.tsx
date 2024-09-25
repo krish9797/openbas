@@ -1,15 +1,13 @@
 import React, { FunctionComponent, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { BarChartOutlined, ReorderOutlined } from '@mui/icons-material';
+import { BarChartOutlined, ReorderOutlined, ViewTimelineOutlined } from '@mui/icons-material';
 import { Grid, Paper, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import { makeStyles } from '@mui/styles';
-import * as R from 'ramda';
-import type { Exercise, Inject } from '../../../../../utils/api-types';
-import { ArticleContext, TeamContext } from '../../../common/Context';
+import type { Exercise } from '../../../../../utils/api-types';
+import { ArticleContext, TeamContext, ViewModeContext } from '../../../common/Context';
 import { useAppDispatch } from '../../../../../utils/hooks';
 import { useHelper } from '../../../../../store';
 import useDataLoader from '../../../../../utils/hooks/useDataLoader';
-import Injects from '../../../common/injects/Injects';
 import { fetchExerciseInjectExpectations, fetchExerciseTeams } from '../../../../../actions/Exercise';
 import type { ExercisesHelper } from '../../../../../actions/exercises/exercise-helper';
 import type { ArticlesHelper } from '../../../../../actions/channels/article-helper';
@@ -27,11 +25,8 @@ import ExerciseDistributionScoreOverTimeByInjectorContract from '../overview/Exe
 import ExerciseDistributionScoreOverTimeByTeam from '../overview/ExerciseDistributionScoreOverTimeByTeam';
 import ExerciseDistributionScoreOverTimeByTeamInPercentage from '../overview/ExerciseDistributionScoreOverTimeByTeamInPercentage';
 import { useFormatter } from '../../../../../components/i18n';
-import useEntityToggle from '../../../../../utils/hooks/useEntityToggle';
-import ToolBar from '../../../common/ToolBar';
-import { isNotEmptyField } from '../../../../../utils/utils';
 import { fetchExerciseInjectsSimple } from '../../../../../actions/injects/inject-action';
-import injectContextForExercise from '../ExerciseContext';
+import Injects from '../../../common/injects/Injects';
 
 const useStyles = makeStyles(() => ({
   paperChart: {
@@ -51,7 +46,18 @@ const ExerciseInjects: FunctionComponent<Props> = () => {
   const { t } = useFormatter();
   const classes = useStyles();
   const dispatch = useAppDispatch();
+  const availableButtons = ['chain', 'list', 'distribution'];
   const { exerciseId } = useParams() as { exerciseId: Exercise['exercise_id'] };
+
+  const [viewMode, setViewMode] = useState(() => {
+    const storedValue = localStorage.getItem('scenario_or_exercise_view_mode');
+    return storedValue === null || !availableButtons.includes(storedValue) ? 'list' : storedValue;
+  });
+
+  const handleViewMode = (mode: string) => {
+    localStorage.setItem('scenario_or_exercise_view_mode', mode);
+    setViewMode(mode);
+  };
 
   const { injects, exercise, teams, articles, variables } = useHelper(
     (helper: InjectHelper & ExercisesHelper & ArticlesHelper & ChallengeHelper & VariablesHelper) => {
@@ -75,135 +81,10 @@ const ExerciseInjects: FunctionComponent<Props> = () => {
   const articleContext = articleContextForExercise(exerciseId);
   const teamContext = teamContextForExercise(exerciseId, []);
 
-  const injectContext = injectContextForExercise(exercise);
-
-  const [viewMode, setViewMode] = useState('list');
-  const {
-    selectedElements,
-    deSelectedElements,
-    selectAll,
-    handleClearSelectedElements,
-    handleToggleSelectAll,
-    onToggleEntity,
-    numberOfSelectedElements,
-  } = useEntityToggle('inject', injects.length);
-  const onRowShiftClick = (currentIndex: number, currentEntity: Inject, event: React.SyntheticEvent | null = null) => {
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-    if (selectedElements && !R.isEmpty(selectedElements)) {
-      // Find the indexes of the first and last selected entities
-      let firstIndex = R.findIndex(
-        (n: Inject) => n.inject_id === R.head(R.values(selectedElements)).inject_id,
-        injects,
-      );
-      if (currentIndex > firstIndex) {
-        let entities: Inject[] = [];
-        while (firstIndex <= currentIndex) {
-          entities = [...entities, injects[firstIndex]];
-          // eslint-disable-next-line no-plusplus
-          firstIndex++;
-        }
-        const forcedRemove = R.values(selectedElements).filter(
-          (n: Inject) => !entities.map((o) => o.inject_id).includes(n.inject_id),
-        );
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        return onToggleEntity(entities, event, forcedRemove);
-      }
-      let entities: Inject[] = [];
-      while (firstIndex >= currentIndex) {
-        entities = [...entities, injects[firstIndex]];
-        // eslint-disable-next-line no-plusplus
-        firstIndex--;
-      }
-      const forcedRemove = R.values(selectedElements).filter(
-        (n: Inject) => !entities.map((o) => o.inject_id).includes(n.inject_id),
-      );
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error
-      return onToggleEntity(entities, event, forcedRemove);
-    }
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-expect-error
-    return onToggleEntity(currentEntity, event);
-  };
-
-  const injectsToProcess = selectAll
-    ? injects.filter((inject: Inject) => !R.keys(deSelectedElements).includes(inject.inject_id))
-    : injects.filter(
-      (inject: Inject) => R.keys(selectedElements).includes(inject.inject_id) && !R.keys(deSelectedElements).includes(inject.inject_id),
-    );
-
-  const massUpdateInjects = async (actions: {
-    field: string,
-    type: string,
-    values: { value: string }[]
-  }[]) => {
-    const updateFields = [
-      'inject_title',
-      'inject_description',
-      'inject_injector_contract',
-      'inject_content',
-      'inject_depends_from_another',
-      'inject_depends_duration',
-      'inject_teams',
-      'inject_assets',
-      'inject_asset_groups',
-      'inject_documents',
-      'inject_all_teams',
-      'inject_country',
-      'inject_city',
-      'inject_tags',
-    ];
-    const injectsToUpdate = injectsToProcess.filter((inject: Inject) => inject.inject_injector_contract?.convertedContent);
-    // eslint-disable-next-line no-plusplus
-    for (let i = 0; i < actions.length; i++) {
-      const action = actions[i];
-      // eslint-disable-next-line no-plusplus
-      for (let j = 0; j < injectsToUpdate.length; j++) {
-        const injectToUpdate = {
-          ...injectsToUpdate[j],
-          inject_injector_contract: injectsToUpdate[j].inject_injector_contract.injector_contract_id,
-        };
-        switch (action.type) {
-          case 'ADD':
-            if (isNotEmptyField(injectToUpdate[`inject_${action.field}`])) {
-              injectToUpdate[`inject_${action.field}`] = R.uniq([...injectToUpdate[`inject_${action.field}`], ...action.values.map((n) => n.value)]);
-            } else {
-              injectToUpdate[`inject_${action.field}`] = R.uniq(action.values.map((n) => n.value));
-            }
-            // eslint-disable-next-line no-await-in-loop
-            await injectContext.onUpdateInject(injectToUpdate.inject_id, R.pick(updateFields, injectToUpdate));
-            break;
-          case 'REPLACE':
-            injectToUpdate[`inject_${action.field}`] = R.uniq(action.values.map((n) => n.value));
-            // eslint-disable-next-line no-await-in-loop
-            await injectContext.onUpdateInject(injectToUpdate.inject_id, R.pick(updateFields, injectToUpdate));
-            break;
-          case 'REMOVE':
-            if (isNotEmptyField(injectToUpdate[`inject_${action.field}`])) {
-              injectToUpdate[`inject_${action.field}`] = injectToUpdate[`inject_${action.field}`].filter((n: string) => !action.values.map((o) => o.value).includes(n));
-            } else {
-              injectToUpdate[`inject_${action.field}`] = [];
-            }
-            // eslint-disable-next-line no-await-in-loop
-            await injectContext.onUpdateInject(injectToUpdate.inject_id, R.pick(updateFields, injectToUpdate));
-            break;
-          default:
-            return;
-        }
-      }
-    }
-  };
-  const bulkDeleteInjects = () => {
-    injectContext.onBulkDeleteInjects(injectsToProcess.map((inject: Inject) => inject.inject_id));
-  };
-
   return (
     <>
-      {viewMode === 'list' && (
+      <ViewModeContext.Provider value={viewMode}>
+        {(viewMode === 'list' || viewMode === 'chain') && (
         <ArticleContext.Provider value={articleContext}>
           <TeamContext.Provider value={teamContext}>
             <Injects
@@ -216,30 +97,15 @@ const ExerciseInjects: FunctionComponent<Props> = () => {
               uriVariable={`/admin/exercises/${exerciseId}/definition/variables`}
               allUsersNumber={exercise.exercise_all_users_number}
               usersNumber={exercise.exercise_users_number}
+              // @ts-expect-error typing
               teamsUsers={exercise.exercise_teams_users}
-              setViewMode={setViewMode}
-              onToggleEntity={onToggleEntity}
-              onToggleShiftEntity={onRowShiftClick}
-              handleToggleSelectAll={handleToggleSelectAll}
-              selectedElements={selectedElements}
-              deSelectedElements={deSelectedElements}
-              selectAll={selectAll}
-            />
-            <ToolBar
-              numberOfSelectedElements={numberOfSelectedElements}
-              selectedElements={selectedElements}
-              deSelectedElements={deSelectedElements}
-              selectAll={selectAll}
-              handleClearSelectedElements={handleClearSelectedElements}
-              context="exercise"
-              id={exercise.exercise_id}
-              handleUpdate={massUpdateInjects}
-              handleBulkDelete={bulkDeleteInjects}
+              setViewMode={handleViewMode}
+              availableButtons={availableButtons}
             />
           </TeamContext.Provider>
         </ArticleContext.Provider>
-      )}
-      {viewMode === 'distribution' && (
+        )}
+        {viewMode === 'distribution' && (
         <div style={{ marginTop: -12 }}>
           <ToggleButtonGroup
             size="small"
@@ -250,17 +116,27 @@ const ExerciseInjects: FunctionComponent<Props> = () => {
             <Tooltip title={t('List view')}>
               <ToggleButton
                 value="list"
-                onClick={() => setViewMode('list')}
+                onClick={() => handleViewMode('list')}
                 selected={false}
                 aria-label="List view mode"
               >
                 <ReorderOutlined fontSize="small" color="primary" />
               </ToggleButton>
             </Tooltip>
+            <Tooltip title={t('Interactive view')}>
+              <ToggleButton
+                value="chain"
+                onClick={() => handleViewMode('chain')}
+                selected={false}
+                aria-label="Interactive view mode"
+              >
+                <ViewTimelineOutlined fontSize="small" color="primary" />
+              </ToggleButton>
+            </Tooltip>
             <Tooltip title={t('Distribution view')}>
               <ToggleButton
                 value="distribution"
-                onClick={() => setViewMode('distribution')}
+                onClick={() => handleViewMode('distribution')}
                 selected={true}
                 aria-label="Distribution view mode"
               >
@@ -321,7 +197,8 @@ const ExerciseInjects: FunctionComponent<Props> = () => {
             </Grid>
           </Grid>
         </div>
-      )}
+        )}
+      </ViewModeContext.Provider>
     </>
   );
 };

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.openbas.annotation.Queryable;
 import io.openbas.database.audit.ModelBaseListener;
+import io.openbas.database.model.Endpoint.PLATFORM_TYPE;
 import io.openbas.helper.InjectStatisticsHelper;
 import io.openbas.helper.MultiIdListDeserializer;
 import io.openbas.helper.MultiIdSetDeserializer;
@@ -41,6 +42,17 @@ import static lombok.AccessLevel.NONE;
 })
 public class Scenario implements Base {
 
+  public enum SEVERITY {
+    @JsonProperty("low")
+    low,
+    @JsonProperty("medium")
+    medium,
+    @JsonProperty("high")
+    high,
+    @JsonProperty("critical")
+    critical,
+  }
+
   @Id
   @UuidGenerator
   @Column(name = "scenario_id")
@@ -50,7 +62,7 @@ public class Scenario implements Base {
 
   @Column(name = "scenario_name")
   @JsonProperty("scenario_name")
-  @Queryable(searchable = true)
+  @Queryable(filterable = true, searchable = true, sortable = true)
   @NotBlank
   private String name;
 
@@ -64,7 +76,7 @@ public class Scenario implements Base {
 
   @Column(name = "scenario_category")
   @JsonProperty("scenario_category")
-  @Queryable(filterable = true)
+  @Queryable(filterable = true, sortable = true, dynamicValues = true)
   private String category;
 
   @Column(name = "scenario_main_focus")
@@ -72,8 +84,10 @@ public class Scenario implements Base {
   private String mainFocus;
 
   @Column(name = "scenario_severity")
+  @Enumerated(EnumType.STRING)
   @JsonProperty("scenario_severity")
-  private String severity;
+  @Queryable(filterable = true, sortable = true)
+  private SEVERITY severity;
 
   @Column(name = "scenario_external_reference")
   @JsonProperty("scenario_external_reference")
@@ -87,6 +101,7 @@ public class Scenario implements Base {
 
   @Column(name = "scenario_recurrence")
   @JsonProperty("scenario_recurrence")
+  @Queryable(filterable = true)
   private String recurrence;
 
   @Column(name = "scenario_recurrence_start")
@@ -115,7 +130,7 @@ public class Scenario implements Base {
 
   @ElementCollection(fetch = FetchType.EAGER)
   @CollectionTable(name = "scenario_mails_reply_to", joinColumns = @JoinColumn(name = "scenario_id"))
-  @Column(name = "scenario_reply_to", nullable=false)
+  @Column(name = "scenario_reply_to", nullable = false)
   @JsonProperty("scenario_mails_reply_to")
   private List<String> replyTos = new ArrayList<>();
 
@@ -129,6 +144,7 @@ public class Scenario implements Base {
   @Column(name = "scenario_updated_at")
   @JsonProperty("scenario_updated_at")
   @NotNull
+  @Queryable(filterable = true, sortable = true)
   private Instant updatedAt = now();
 
   // -- RELATION --
@@ -143,10 +159,6 @@ public class Scenario implements Base {
   @Getter(NONE)
   private Set<Inject> injects = new HashSet<>();
 
-  public List<Inject> getInjects() {
-    return new ArrayList<>(this.injects);
-  }
-
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(name = "scenarios_teams",
       joinColumns = @JoinColumn(name = "scenario_id"),
@@ -160,7 +172,7 @@ public class Scenario implements Base {
   @JsonSerialize(using = MultiModelDeserializer.class)
   private List<ScenarioTeamUser> teamUsers = new ArrayList<>();
 
-  @OneToMany(mappedBy = "scenario", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "scenario", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JsonIgnore
   private List<Objective> objectives = new ArrayList<>();
 
@@ -170,6 +182,7 @@ public class Scenario implements Base {
       inverseJoinColumns = @JoinColumn(name = "tag_id"))
   @JsonSerialize(using = MultiIdSetDeserializer.class)
   @JsonProperty("scenario_tags")
+  @Queryable(filterable = true, dynamicValues = true, path = "tags.id")
   private Set<Tag> tags = new HashSet<>();
 
   @ManyToMany(fetch = FetchType.LAZY)
@@ -185,7 +198,7 @@ public class Scenario implements Base {
   @JsonProperty("scenario_articles")
   private List<Article> articles = new ArrayList<>();
 
-  @OneToMany(mappedBy = "scenario", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "scenario", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JsonSerialize(using = MultiIdListDeserializer.class)
   @JsonProperty("scenario_lessons_categories")
   private List<LessonsCategory> lessonsCategories = new ArrayList<>();
@@ -197,6 +210,17 @@ public class Scenario implements Base {
   @JsonSerialize(using = MultiIdListDeserializer.class)
   @JsonProperty("scenario_exercises")
   private List<Exercise> exercises;
+
+  @Getter
+  @Column(name = "scenario_lessons_anonymized")
+  @JsonProperty("scenario_lessons_anonymized")
+  private boolean lessonsAnonymized = false;
+
+  // -- LESSONS --
+
+  public List<Inject> getInjects() {
+    return new ArrayList<>(this.injects);
+  }
 
   // -- SECURITY --
 
@@ -253,7 +277,8 @@ public class Scenario implements Base {
 
   // -- PLATFORMS --
   @JsonProperty("scenario_platforms")
-  public List<String> getPlatforms() {
+  @Queryable(filterable = true, path = "injects.injectorContract.platforms", clazz = String[].class)
+  public List<PLATFORM_TYPE> getPlatforms() {
     return getInjects().stream()
         .flatMap(inject -> inject.getInjectorContract()
             .map(InjectorContract::getPlatforms)
@@ -263,8 +288,10 @@ public class Scenario implements Base {
         .distinct()
         .toList();
   }
+
   // -- KILL CHAIN PHASES --
   @JsonProperty("scenario_kill_chain_phases")
+  @Queryable(filterable = true, dynamicValues = true, path = "injects.injectorContract.attackPatterns.killChainPhases.id")
   public List<KillChainPhase> getKillChainPhases() {
     return getInjects().stream()
         .flatMap(inject -> inject.getInjectorContract()

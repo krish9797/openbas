@@ -1,19 +1,24 @@
 import React, { useState } from 'react';
+import { ToggleButtonGroup } from '@mui/material';
 import { useFormatter } from '../../../components/i18n';
 import { useHelper } from '../../../store';
 import Breadcrumbs from '../../../components/Breadcrumbs';
 import ExerciseCreation from './simulation/ExerciseCreation';
 import type { ExercisesHelper } from '../../../actions/exercises/exercise-helper';
 import type { UserHelper } from '../../../actions/helper';
-import PaginationComponent from '../../../components/common/pagination/PaginationComponent';
-import { initSorting } from '../../../components/common/pagination/Page';
-import type { SearchPaginationInput } from '../../../utils/api-types';
+import { initSorting } from '../../../components/common/queryable/Page';
 import type { EndpointStore } from '../assets/endpoints/Endpoint';
 import ExerciseList from './ExerciseList';
 import { searchExercises } from '../../../actions/Exercise';
 import ImportUploaderExercise from './ImportUploaderExercise';
+import { buildSearchPagination } from '../../../components/common/queryable/QueryableUtils';
+import { useQueryableWithLocalStorage } from '../../../components/common/queryable/useQueryableWithLocalStorage';
+import PaginationComponentV2 from '../../../components/common/queryable/pagination/PaginationComponentV2';
 import ExercisePopover from './simulation/ExercisePopover';
 import type { ExerciseStore } from '../../../actions/exercises/Exercise';
+import type { FilterGroup } from '../../../utils/api-types';
+import { buildEmptyFilter } from '../../../components/common/queryable/filter/FilterUtils';
+import ExportButton from '../../../components/common/ExportButton';
 
 const Exercises = () => {
   // Standard hooks
@@ -25,9 +30,30 @@ const Exercises = () => {
   }));
 
   const [exercises, setExercises] = useState<EndpointStore[]>([]);
-  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>({
+
+  // Filters
+  const availableFilterNames = [
+    'exercise_kill_chain_phases',
+    'exercise_name',
+    'exercise_scenario',
+    'exercise_start_date',
+    'exercise_status',
+    'exercise_tags',
+    'exercise_updated_at',
+  ];
+
+  const quickFilter: FilterGroup = {
+    mode: 'and',
+    filters: [
+      buildEmptyFilter('exercise_kill_chain_phases', 'contains'),
+      buildEmptyFilter('exercise_scenario', 'contains'),
+      buildEmptyFilter('exercise_tags', 'contains'),
+    ],
+  };
+  const { queryableHelpers, searchPaginationInput } = useQueryableWithLocalStorage('simulations', buildSearchPagination({
     sorts: initSorting('exercise_updated_at', 'DESC'),
-  });
+    filterGroup: quickFilter,
+  }));
 
   // Export
   const exportProps = {
@@ -55,18 +81,23 @@ const Exercises = () => {
   return (
     <>
       <Breadcrumbs variant="list" elements={[{ label: t('Simulations'), current: true }]} />
-      <PaginationComponent
+      <PaginationComponentV2
         fetch={searchExercises}
         searchPaginationInput={searchPaginationInput}
         setContent={setExercises}
-        exportProps={exportProps}
-      >
-        <ImportUploaderExercise />
-      </PaginationComponent>
+        entityPrefix="exercise"
+        availableFilterNames={availableFilterNames}
+        queryableHelpers={queryableHelpers}
+        topBarButtons={
+          <ToggleButtonGroup value="fake" exclusive>
+            <ExportButton totalElements={queryableHelpers.paginationHelpers.getTotalElements()} exportProps={exportProps} />
+            <ImportUploaderExercise />
+          </ToggleButtonGroup>
+        }
+      />
       <ExerciseList
         exercises={exercises}
-        searchPaginationInput={searchPaginationInput}
-        setSearchPaginationInput={setSearchPaginationInput}
+        queryableHelpers={queryableHelpers}
         secondaryAction={secondaryAction}
       />
       {userAdmin && <ExerciseCreation />}

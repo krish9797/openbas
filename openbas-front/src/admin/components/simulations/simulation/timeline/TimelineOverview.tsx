@@ -79,13 +79,11 @@ const TimelineOverview = () => {
     exercise,
     injects,
     teams,
-    tagsMap,
   } = useHelper((helper: InjectHelper & ExercisesHelper & TagHelper) => {
     return {
       exercise: helper.getExercise(exerciseId),
       injects: helper.getExerciseInjects(exerciseId),
       teams: helper.getExerciseTeams(exerciseId),
-      tagsMap: helper.getTagsMap(),
     };
   });
 
@@ -206,9 +204,10 @@ const TimelineOverview = () => {
                         <ListItemSecondaryAction>
                           <InjectPopover
                             inject={inject}
-                            tagsMap={tagsMap}
                             setSelectedInjectId={setSelectedInjectId}
                             isDisabled={isDisabled}
+                            canDone
+                            canTriggerNow
                           />
                         </ListItemSecondaryAction>
                       </ListItem>
@@ -293,7 +292,7 @@ const TimelineOverview = () => {
           </Grid>
         </Grid>
       </Grid>
-      <Grid container={true} spacing={3}>
+      <Grid container spacing={3}>
         <Grid item xs={6}>
           <Typography variant="h4">
             {t('Sent injects over time')}
@@ -319,6 +318,7 @@ const TimelineOverview = () => {
           injectId={selectedInjectId}
           teamsFromExerciseOrScenario={teams}
           isAtomic={false}
+          injects={injects}
         />
       )}
     </div>

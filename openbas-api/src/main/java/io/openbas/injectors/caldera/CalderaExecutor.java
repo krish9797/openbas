@@ -107,7 +107,7 @@ public class CalderaExecutor extends Injector {
                 try {
                     Endpoint executionEndpoint = this.findAndRegisterAssetForExecution(injection.getInjection().getInject(), asset);
                     if (executionEndpoint != null) {
-                        if (Arrays.stream(injectorContract.getPlatforms()).anyMatch(s -> s.equals(executionEndpoint.getPlatform().name()))) {
+                        if (Arrays.stream(injectorContract.getPlatforms()).anyMatch(s -> s.equals(executionEndpoint.getPlatform()))) {
                             String result = this.calderaService.exploit(obfuscator, executionEndpoint.getExternalReference(), contract, additionalFields);
                             if (result.contains("complete")) {
                                 ExploitResult exploitResult = this.calderaService.exploitResult(executionEndpoint.getExternalReference(), contract);
@@ -171,6 +171,28 @@ public class CalderaExecutor extends Injector {
         String message = "Caldera executed the ability on " + asyncIds.size() + " asset(s)";
         execution.addTrace(traceInfo(message, asyncIds));
         return new ExecutionProcess(true, expectations);
+    }
+
+    @Override
+    public InjectStatusCommandLine getCommandsLines(String externalId) {
+        InjectStatusCommandLine commandLine = new InjectStatusCommandLine();
+        Set<String> contents = new HashSet<>();
+        Set<String> cleanCommands = new HashSet<>();
+        Ability ability = calderaService.findAbilityById(externalId);
+        if(ability != null) {
+            ability.getExecutors().forEach(executor -> {
+                if(executor.getCommand() != null && !executor.getCommand().isBlank()) {
+                    contents.add(executor.getCommand());
+                }
+                if(executor.getCleanup() != null && !executor.getCleanup().isEmpty()) {
+                    cleanCommands.addAll(executor.getCleanup());
+                }
+            });
+        }
+        commandLine.setExternalId(externalId);
+        commandLine.setContent(contents.stream().toList());
+        commandLine.setCleanupCommand(cleanCommands.stream().toList());
+        return commandLine;
     }
 
     // -- PRIVATE --

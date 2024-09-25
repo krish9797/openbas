@@ -94,7 +94,7 @@ public class PlatformSettingsService {
       return providers.entrySet().stream()
           .map(entry -> {
             String uri = "/oauth2/authorization/" + entry.getKey();
-            String clientName = env.getProperty("openex.provider." + entry.getKey() + ".login");
+            String clientName = env.getProperty("openbas.provider." + entry.getKey() + ".login");
             // In case of missing name configuration, generate a generic name
             if (clientName == null) {
               clientName = "Login with " + entry.getKey();
@@ -118,7 +118,7 @@ public class PlatformSettingsService {
       return providers.entrySet().stream()
           .map(entry -> {
             String uri = "/saml2/authenticate/" + entry.getKey();
-            String clientName = env.getProperty("openex.provider." + entry.getKey() + ".login");
+            String clientName = env.getProperty("openbas.provider." + entry.getKey() + ".login");
             // In case of missing name configuration, generate a generic name
             if (clientName == null) {
               clientName = "Login with " + entry.getKey();
@@ -192,6 +192,7 @@ public class PlatformSettingsService {
           ofNullable(dbSettings.get(PLATFORM_NAME.key())).map(Setting::getValue).orElse(PLATFORM_NAME.defaultValue())
       );
       platformSettings.setPlatformBaseUrl(openBASConfig.getBaseUrl());
+      platformSettings.setPlatformAgentUrl(openBASConfig.getBaseUrlForAgent());
       platformSettings.setXtmOpenctiEnable(openCTIConfig.getEnable());
       platformSettings.setXtmOpenctiUrl(openCTIConfig.getUrl());
       platformSettings.setAiEnabled(aiConfig.isEnabled());

@@ -14,7 +14,7 @@ import GroupPopover from './GroupPopover';
 import SecurityMenu from '../SecurityMenu';
 import { fetchScenarios } from '../../../../actions/scenarios/scenario-actions';
 import useDataLoader from '../../../../utils/hooks/useDataLoader';
-import { initSorting } from '../../../../components/common/pagination/Page';
+import { initSorting } from '../../../../components/common/queryable/Page';
 import Breadcrumbs from '../../../../components/Breadcrumbs';
 import PaginationComponent from '../../../../components/common/pagination/PaginationComponent';
 import SortHeadersComponent from '../../../../components/common/pagination/SortHeadersComponent';
@@ -55,18 +55,23 @@ const inlineStyles = {
   },
   group_default_scenario_observer: {
     width: '15%',
+    cursor: 'default',
   },
   group_default_scenario_planner: {
     width: '15%',
+    cursor: 'default',
   },
   group_default_exercise_observer: {
     width: '15%',
+    cursor: 'default',
   },
   group_default_exercise_planner: {
     width: '15%',
+    cursor: 'default',
   },
   group_users_number: {
     width: '10%',
+    cursor: 'default',
   },
 };
 
@@ -88,11 +93,11 @@ const Groups = () => {
   const headers = [
     { field: 'group_name', label: 'Name', isSortable: true },
     { field: 'group_default_user_assign', label: 'Auto assign', isSortable: true },
-    { field: 'group_default_scenario_observer', label: 'Auto observer on scenarios', isSortable: true },
-    { field: 'group_default_scenario_planner', label: 'Auto planner on scenarios', isSortable: true },
-    { field: 'group_default_exercise_observer', label: 'Auto observer on exercises', isSortable: true },
-    { field: 'group_default_exercise_planner', label: 'Auto planner on exercises', isSortable: true },
-    { field: 'group_users_number', label: 'Users', isSortable: true },
+    { field: 'group_default_scenario_observer', label: 'Auto observer on scenarios', isSortable: false },
+    { field: 'group_default_scenario_planner', label: 'Auto planner on scenarios', isSortable: false },
+    { field: 'group_default_exercise_observer', label: 'Auto observer on exercises', isSortable: false },
+    { field: 'group_default_exercise_planner', label: 'Auto planner on exercises', isSortable: false },
+    { field: 'group_users_number', label: 'Users', isSortable: false },
   ];
 
   const [groups, setGroups] = useState([]);

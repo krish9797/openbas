@@ -19,8 +19,10 @@ const IndexPrivate = lazy(() => import('./private/Index'));
 const IndexAdmin = lazy(() => import('./admin/Index'));
 const Comcheck = lazy(() => import('./public/components/comcheck/Comcheck'));
 const Channel = lazy(() => import('./public/components/channels/Channel'));
+const ExerciseReport = lazy(() => import('./admin/components/simulations/simulation/reports/ExerciseReport'));
 const Challenges = lazy(() => import('./public/components/challenges/Challenges'));
-const Lessons = lazy(() => import('./public/components/lessons/Lessons'));
+const ExerciseViewLessons = lazy(() => import('./public/components/lessons/ExerciseViewLessons'));
+const ScenarioViewLessons = lazy(() => import('./public/components/lessons/ScenarioViewLessons'));
 
 const Root = () => {
   const { logged, me, settings } = useHelper((helper: LoggedHelper) => {
@@ -63,7 +65,9 @@ const Root = () => {
                 <Route path="comcheck/:statusId" element={errorWrapper(Comcheck)()} />
                 <Route path="channels/:exerciseId/:channelId" element={errorWrapper(Channel)()} />
                 <Route path="challenges/:exerciseId" element={errorWrapper(Challenges)()} />
-                <Route path="lessons/:exerciseId" element={errorWrapper(Lessons)()} />
+                <Route path="lessons/exercise/:exerciseId" element={errorWrapper(ExerciseViewLessons)()} />
+                <Route path="lessons/scenario/:scenarioId" element={errorWrapper(ScenarioViewLessons)()} />
+                <Route path="reports/:exerciseId/:reportId" element={errorWrapper(ExerciseReport)()} />
                 {/* Not found */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

@@ -32,10 +32,11 @@ public class PropertySchema {
   private final boolean searchable;
   private final boolean filterable;
   private final List<String> availableValues;
+  private final boolean dynamicValues;
   private final boolean sortable;
-  private final String propertyRepresentative;
 
   private final JoinTable joinTable;
+  private final String path;
 
   @Singular("propertySchema")
   private final List<PropertySchema> propertiesSchema;

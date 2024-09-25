@@ -91,38 +91,30 @@ public class InjectExpectation implements Base {
   @JsonProperty("inject_expectation_status")
   public EXPECTATION_STATUS getResponse() {
 
-    if( this.getScore() == null ) {
+    if (this.getScore() == null) {
       return EXPECTATION_STATUS.PENDING;
     }
-
     if (team != null) {
-      if(this.isExpectationGroup()){
-        if( this.getScore() > 0) {
-          return EXPECTATION_STATUS.SUCCESS;
-        }else{
-          return EXPECTATION_STATUS.FAILED;
-        }
-      }else{
-        if( this.getScore() >= this.getExpectedScore()) {
-          return EXPECTATION_STATUS.SUCCESS;
-        }else{
-          return EXPECTATION_STATUS.FAILED;
-        }
-      }
-    }else {
-      if (this.getScore() >= this.getExpectedScore()) {
-        return EXPECTATION_STATUS.SUCCESS;
-      }
-      if (this.getScore() == 0) {
-        return EXPECTATION_STATUS.FAILED;
-      }
-      return EXPECTATION_STATUS.PARTIAL;
+      return switch (getResults().getFirst().getResult()) {
+        case "Failed" -> EXPECTATION_STATUS.FAILED;
+        case "Success" -> EXPECTATION_STATUS.SUCCESS;
+        default -> EXPECTATION_STATUS.PENDING;
+      };
     }
+
+    if (this.getScore() >= this.getExpectedScore()) {
+      return EXPECTATION_STATUS.SUCCESS;
+    }
+    if (this.getScore() == 0) {
+      return EXPECTATION_STATUS.FAILED;
+    }
+    return EXPECTATION_STATUS.PARTIAL;
   }
 
   @Setter
   @Column(name = "inject_expectation_expected_score")
   @JsonProperty("inject_expectation_expected_score")
+  @NotNull
   private Double expectedScore;
 
   @Setter
@@ -208,8 +200,8 @@ public class InjectExpectation implements Base {
   }
 
   public void setManual(
-          @NotNull final Asset asset,
-          @NotNull final AssetGroup assetGroup) {
+      @NotNull final Asset asset,
+      @NotNull final AssetGroup assetGroup) {
     this.type = EXPECTATION_TYPE.MANUAL;
     this.asset = asset;
     this.assetGroup = assetGroup;

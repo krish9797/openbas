@@ -16,12 +16,13 @@ import Breadcrumbs from '../../../../components/Breadcrumbs';
 import PaginationComponent from '../../../../components/common/pagination/PaginationComponent';
 import type { EndpointHelper } from '../../../../actions/assets/asset-helper';
 import type { SearchPaginationInput } from '../../../../utils/api-types';
-import { initSorting } from '../../../../components/common/pagination/Page';
+import { initSorting } from '../../../../components/common/queryable/Page';
 import SortHeadersComponent from '../../../../components/common/pagination/SortHeadersComponent';
-import { convertOperatorToIcon } from '../../../../components/common/filter/FilterUtils';
+import { convertOperatorToIcon } from '../../../../components/common/queryable/filter/FilterUtils';
 import { useAppDispatch } from '../../../../utils/hooks';
 import { fetchTags } from '../../../../actions/Tag';
 import useDataLoader from '../../../../utils/hooks/useDataLoader';
+import { buildSearchPagination } from '../../../../components/common/queryable/QueryableUtils';
 
 const useStyles = makeStyles(() => ({
   itemHead: {
@@ -61,6 +62,7 @@ const inlineStyles: Record<string, CSSProperties> = {
   },
   asset_group_assets: {
     width: '35%',
+    cursor: 'default',
   },
   asset_group_tags: {
     width: '25%',
@@ -98,10 +100,10 @@ const AssetGroups = () => {
   ];
 
   const [assetGroups, setAssetGroups] = useState<AssetGroupStore[]>([]);
-  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>({
+  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>(buildSearchPagination({
     sorts: initSorting('asset_group_name'),
     textSearch: search,
-  });
+  }));
 
   // Export
   const exportProps = {
@@ -117,14 +119,14 @@ const AssetGroups = () => {
 
   return (
     <>
-      <Breadcrumbs variant="list" elements={[{ label: t('Assets') }, { label: t('Asset groups'), current: true }]}/>
+      <Breadcrumbs variant="list" elements={[{ label: t('Assets') }, { label: t('Asset groups'), current: true }]} />
       <PaginationComponent
         fetch={searchAssetGroups}
         searchPaginationInput={searchPaginationInput}
         setContent={setAssetGroups}
         exportProps={exportProps}
       />
-      <div className="clearfix"/>
+      <div className="clearfix" />
       <List>
         <ListItem
           classes={{ root: classes.itemHead }}
@@ -150,7 +152,7 @@ const AssetGroups = () => {
                 searchPaginationInput={searchPaginationInput}
                 setSearchPaginationInput={setSearchPaginationInput}
               />
-          }
+            }
           />
           <ListItemSecondaryAction> &nbsp; </ListItemSecondaryAction>
         </ListItem>
@@ -163,7 +165,7 @@ const AssetGroups = () => {
             onClick={() => setSelectedAssetGroupId(assetGroup.asset_group_id)}
           >
             <ListItemIcon>
-              <SelectGroup color="primary"/>
+              <SelectGroup color="primary" />
             </ListItemIcon>
             <ListItemText
               primary={
@@ -179,7 +181,7 @@ const AssetGroups = () => {
                       ? assetGroup.asset_group_dynamic_filter?.filters.map((filter, index) => (
                         <>
                           {
-                              index !== 0 && <span style={{ marginRight: 10 }}>
+                            index !== 0 && <span style={{ marginRight: 10 }}>
                                 {t(assetGroup.asset_group_dynamic_filter?.mode?.toUpperCase())}
                               </span>
                           }
@@ -187,17 +189,17 @@ const AssetGroups = () => {
                             size="small"
                             style={index !== assetGroup.asset_group_dynamic_filter?.filters?.length ? { marginRight: 10 } : {}}
                             key={filter.key}
-                            label={<><strong>{t(filter.key)}</strong> {convertOperatorToIcon(t, filter.operator)} {filter.values?.join(', ')}</>}
+                            label={<><strong>{t(filter.key)}</strong> {convertOperatorToIcon(t, filter.operator)}{' '}{filter.values?.join(', ')}</>}
                           />
                         </>))
                       : ''}
                     {assetGroup.asset_group_assets?.length ? `${assetGroup.asset_group_dynamic_filter?.filters?.length ? t('and') : ''} ${assetGroup.asset_group_assets?.length} ${t('managed assets')}` : ''}
                   </div>
                   <div className={classes.bodyItem} style={inlineStyles.asset_group_tags}>
-                    <ItemTags variant="list" tags={assetGroup.asset_group_tags}/>
+                    <ItemTags variant="list" tags={assetGroup.asset_group_tags} />
                   </div>
                 </div>
-            }
+              }
             />
             <ListItemSecondaryAction>
               <AssetGroupPopover
@@ -214,7 +216,7 @@ const AssetGroups = () => {
           </ListItem>
         ))}
       </List>
-      {userAdmin && <AssetGroupCreation onCreate={(result) => setAssetGroups([result, ...assetGroups])}/>}
+      {userAdmin && <AssetGroupCreation onCreate={(result) => setAssetGroups([result, ...assetGroups])} />}
       <MuiDrawer
         open={selectedAssetGroupId !== undefined}
         keepMounted={false}
@@ -225,15 +227,15 @@ const AssetGroups = () => {
         elevation={1}
       >
         {selectedAssetGroupId !== undefined && (
-        <AssetGroupManagement
-          assetGroupId={selectedAssetGroupId}
-          handleClose={() => setSelectedAssetGroupId(undefined)}
-          onUpdate={(result) => setAssetGroups(assetGroups.map((ag) => (ag.asset_group_id !== result.asset_group_id ? ag : result)))}
-          onRemoveEndpointFromAssetGroup={(assetId) => setAssetGroups(assetGroups.map((ag) => (ag.asset_group_id !== selectedAssetGroupId ? ag : {
-            ...ag,
-            asset_group_assets: ag?.asset_group_assets?.toSpliced(ag?.asset_group_assets?.indexOf(assetId), 1),
-          })))}
-        />
+          <AssetGroupManagement
+            assetGroupId={selectedAssetGroupId}
+            handleClose={() => setSelectedAssetGroupId(undefined)}
+            onUpdate={(result) => setAssetGroups(assetGroups.map((ag) => (ag.asset_group_id !== result.asset_group_id ? ag : result)))}
+            onRemoveEndpointFromAssetGroup={(assetId) => setAssetGroups(assetGroups.map((ag) => (ag.asset_group_id !== selectedAssetGroupId ? ag : {
+              ...ag,
+              asset_group_assets: ag?.asset_group_assets?.toSpliced(ag?.asset_group_assets?.indexOf(assetId), 1),
+            })))}
+          />
         )}
       </MuiDrawer>
     </>

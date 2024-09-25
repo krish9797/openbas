@@ -1,21 +1,11 @@
 import * as schema from './Schema';
-import { bulkDeleteReferential, delReferential, getReferential, postReferential, putReferential, simpleCall } from '../utils/Action';
+import { bulkDeleteReferential, delReferential, getReferential, postReferential, putReferential } from '../utils/Action';
 
 // -- INJECTS --
 
 export const fetchInject = (injectId) => (dispatch) => {
   const uri = `/api/injects/${injectId}`;
   return getReferential(schema.inject, uri)(dispatch);
-};
-
-export const tryInject = (injectId) => (dispatch) => {
-  const uri = `/api/injects/try/${injectId}`;
-  return getReferential(null, uri, null)(dispatch);
-};
-
-export const testInject = (injectId) => {
-  const uri = `/api/injects/${injectId}/test`;
-  return simpleCall(uri);
 };
 
 // -- EXERCISES --
@@ -35,9 +25,9 @@ export const updateInjectForExercise = (exerciseId, injectId, data) => (dispatch
   return putReferential(schema.inject, uri, data)(dispatch);
 };
 
-export const updateInjectTriggerForExercise = (exerciseId, injectId, data) => (dispatch) => {
+export const updateInjectTriggerForExercise = (exerciseId, injectId) => (dispatch) => {
   const uri = `/api/exercises/${exerciseId}/injects/${injectId}/trigger`;
-  return putReferential(schema.inject, uri, data)(dispatch);
+  return putReferential(schema.inject, uri)(dispatch);
 };
 
 export const updateInjectActivationForExercise = (exerciseId, injectId, data) => (dispatch) => {

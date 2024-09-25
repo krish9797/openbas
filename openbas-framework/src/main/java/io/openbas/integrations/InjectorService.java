@@ -2,14 +2,15 @@ package io.openbas.integrations;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.openbas.injector_contract.Contract;
-import io.openbas.injector_contract.Contractor;
 import io.openbas.database.model.AttackPattern;
+import io.openbas.database.model.Endpoint.PLATFORM_TYPE;
 import io.openbas.database.model.Injector;
 import io.openbas.database.model.InjectorContract;
 import io.openbas.database.repository.AttackPatternRepository;
 import io.openbas.database.repository.InjectorContractRepository;
 import io.openbas.database.repository.InjectorRepository;
+import io.openbas.injector_contract.Contract;
+import io.openbas.injector_contract.Contractor;
 import io.openbas.service.FileService;
 import jakarta.annotation.Resource;
 import jakarta.transaction.Transactional;
@@ -71,6 +72,11 @@ public class InjectorService {
     @Transactional
     public void register(String id, String name, Contractor contractor, Boolean isCustomizable, String category, Map<String, String> executorCommands, Map<String, String> executorClearCommands, Boolean isPayloads) throws Exception {
         if(!contractor.isExpose()) {
+            Injector injector = injectorRepository.findById(id).orElse(null);
+            if( injector != null ) {
+                injectorRepository.deleteById(id);
+                return;
+            }
             return;
         }
         if (contractor.getIcon() != null) {
@@ -107,7 +113,7 @@ public class InjectorService {
                     existing.add(contract.getId());
                     contract.setManual(current.get().isManual());
                     contract.setAtomicTesting(current.get().isAtomicTesting());
-                    contract.setPlatforms(current.get().getPlatforms().toArray(new String[0]));
+                    contract.setPlatforms(current.get().getPlatforms().toArray(new PLATFORM_TYPE[0]));
                     contract.setNeedsExecutor(current.get().isNeedsExecutor());
                     Map<String, String> labels = current.get().getLabel().entrySet().stream()
                             .collect(Collectors.toMap(e -> e.getKey().toString(), Map.Entry::getValue));
@@ -134,7 +140,7 @@ public class InjectorService {
                 injectorContract.setId(in.getId());
                 injectorContract.setManual(in.isManual());
                 injectorContract.setAtomicTesting(in.isAtomicTesting());
-                injectorContract.setPlatforms(in.getPlatforms().toArray(new String[0]));
+                injectorContract.setPlatforms(in.getPlatforms().toArray(new PLATFORM_TYPE[0]));
                 injectorContract.setNeedsExecutor(in.isNeedsExecutor());
                 Map<String, String> labels = in.getLabel().entrySet().stream()
                         .collect(Collectors.toMap(e -> e.getKey().toString(), Map.Entry::getValue));
@@ -175,7 +181,7 @@ public class InjectorService {
                 injectorContract.setId(in.getId());
                 injectorContract.setManual(in.isManual());
                 injectorContract.setAtomicTesting(in.isAtomicTesting());
-                injectorContract.setPlatforms(in.getPlatforms().toArray(new String[0]));
+                injectorContract.setPlatforms(in.getPlatforms().toArray(new PLATFORM_TYPE[0]));
                 injectorContract.setNeedsExecutor(in.isNeedsExecutor());
                 Map<String, String> labels = in.getLabel().entrySet().stream()
                         .collect(Collectors.toMap(e -> e.getKey().toString(), Map.Entry::getValue));

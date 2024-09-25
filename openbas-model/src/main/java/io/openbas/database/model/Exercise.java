@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.openbas.annotation.Queryable;
 import io.openbas.database.audit.ModelBaseListener;
+import io.openbas.database.model.Endpoint.PLATFORM_TYPE;
+import io.openbas.database.model.Scenario.SEVERITY;
 import io.openbas.helper.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -16,6 +18,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static io.openbas.database.model.Grant.GRANT_TYPE.OBSERVER;
 import static io.openbas.database.model.Grant.GRANT_TYPE.PLANNER;
@@ -41,7 +44,7 @@ public class Exercise implements Base {
   @Getter
   @Column(name = "exercise_name")
   @JsonProperty("exercise_name")
-  @Queryable(searchable = true, sortable = true)
+  @Queryable(filterable = true, searchable = true, sortable = true)
   @NotBlank
   private String name;
 
@@ -54,7 +57,7 @@ public class Exercise implements Base {
   @Column(name = "exercise_status")
   @JsonProperty("exercise_status")
   @Enumerated(EnumType.STRING)
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, sortable = true)
   @NotNull
   private ExerciseStatus status = ExerciseStatus.SCHEDULED;
 
@@ -66,7 +69,6 @@ public class Exercise implements Base {
   @Getter
   @Column(name = "exercise_category")
   @JsonProperty("exercise_category")
-  @Queryable(filterable = true)
   private String category;
 
   @Getter
@@ -76,8 +78,9 @@ public class Exercise implements Base {
 
   @Getter
   @Column(name = "exercise_severity")
+  @Enumerated(EnumType.STRING)
   @JsonProperty("exercise_severity")
-  private String severity;
+  private SEVERITY severity;
 
   @Column(name = "exercise_pause_date")
   @JsonIgnore
@@ -85,7 +88,7 @@ public class Exercise implements Base {
 
   @Column(name = "exercise_start_date")
   @JsonProperty("exercise_start_date")
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, sortable = true)
   private Instant start;
 
   @Column(name = "exercise_end_date")
@@ -144,6 +147,7 @@ public class Exercise implements Base {
       inverseJoinColumns = @JoinColumn(name = "scenario_id"))
   @JsonSerialize(using = MonoIdDeserializer.class)
   @JsonProperty("exercise_scenario")
+  @Queryable(filterable = true, dynamicValues = true)
   private Scenario scenario;
 
   // -- AUDIT --
@@ -158,6 +162,7 @@ public class Exercise implements Base {
   @Column(name = "exercise_updated_at")
   @JsonProperty("exercise_updated_at")
   @NotNull
+  @Queryable(filterable = true, sortable = true)
   private Instant updatedAt = now();
 
   // -- RELATION --
@@ -188,7 +193,7 @@ public class Exercise implements Base {
   private List<ExerciseTeamUser> teamUsers = new ArrayList<>();
 
   @Getter
-  @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JsonIgnore
   private List<Objective> objectives = new ArrayList<>();
 
@@ -210,7 +215,7 @@ public class Exercise implements Base {
       inverseJoinColumns = @JoinColumn(name = "tag_id"))
   @JsonSerialize(using = MultiIdSetDeserializer.class)
   @JsonProperty("exercise_tags")
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, dynamicValues = true)
   private Set<Tag> tags = new HashSet<>();
 
   @Getter
@@ -229,7 +234,7 @@ public class Exercise implements Base {
   private List<Article> articles = new ArrayList<>();
 
   @Getter
-  @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY)
+  @OneToMany(mappedBy = "exercise", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JsonSerialize(using = MultiIdListDeserializer.class)
   @JsonProperty("exercise_lessons_categories")
   private List<LessonsCategory> lessonsCategories = new ArrayList<>();
@@ -308,7 +313,7 @@ public class Exercise implements Base {
 
   // -- PLATFORMS --
   @JsonProperty("exercise_platforms")
-  public List<String> getPlatforms() {
+  public List<PLATFORM_TYPE> getPlatforms() {
     return getInjects().stream()
         .flatMap(inject -> inject.getInjectorContract()
             .map(InjectorContract::getPlatforms)
@@ -320,6 +325,7 @@ public class Exercise implements Base {
 
   // -- KILL CHAIN PHASES --
   @JsonProperty("exercise_kill_chain_phases")
+  @Queryable(filterable = true, dynamicValues = true, path = "injects.injectorContract.attackPatterns.killChainPhases.id")
   public List<KillChainPhase> getKillChainPhases() {
     return getInjects().stream()
         .flatMap(inject -> inject.getInjectorContract()
@@ -365,7 +371,7 @@ public class Exercise implements Base {
   }
 
   public List<Inject> getInjects() {
-      return injects.stream().sorted(Inject.executionComparator).toList();
+      return injects.stream().sorted(Inject.executionComparator).collect(Collectors.toList()); // Should be modifiable
   }
 
   public List<Article> getArticlesForChannel(Channel channel) {

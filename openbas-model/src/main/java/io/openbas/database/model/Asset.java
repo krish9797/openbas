@@ -53,6 +53,7 @@ public class Asset implements Base {
   @NotBlank
   private String name;
 
+  @Queryable(sortable = true)
   @Column(name = "asset_description")
   @JsonProperty("asset_description")
   private String description;
@@ -75,7 +76,7 @@ public class Asset implements Base {
 
   // -- TAG --
 
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, sortable = true, dynamicValues = true, path = "tags.id")
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(name = "assets_tags",
       joinColumns = @JoinColumn(name = "asset_id"),
@@ -84,6 +85,7 @@ public class Asset implements Base {
   @JsonProperty("asset_tags")
   private Set<Tag> tags = new HashSet<>();
 
+  @Queryable(sortable = true)
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "asset_executor")
   @JsonSerialize(using = MonoIdDeserializer.class)

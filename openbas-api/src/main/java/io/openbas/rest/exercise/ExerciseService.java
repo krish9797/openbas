@@ -6,10 +6,13 @@ import io.openbas.config.OpenBASConfig;
 import io.openbas.database.model.*;
 import io.openbas.database.repository.ArticleRepository;
 import io.openbas.database.repository.ExerciseRepository;
+import io.openbas.rest.exception.ElementNotFoundException;
+import io.openbas.database.repository.TeamRepository;
 import io.openbas.rest.exercise.form.ExerciseSimple;
 import io.openbas.rest.inject.service.InjectDuplicateService;
 import io.openbas.service.GrantService;
 import io.openbas.service.InjectService;
+import io.openbas.service.TeamService;
 import io.openbas.service.VariableService;
 import jakarta.annotation.Resource;
 import jakarta.persistence.EntityManager;
@@ -19,8 +22,8 @@ import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.*;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -33,7 +36,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static io.openbas.database.criteria.ExerciseCriteria.countQuery;
+import static io.openbas.database.criteria.GenericCriteria.countQuery;
 import static io.openbas.helper.StreamHelper.fromIterable;
 import static io.openbas.utils.AtomicTestingUtils.getExpectationResultByTypes;
 import static io.openbas.utils.Constants.ARTICLES;
@@ -41,6 +44,7 @@ import static io.openbas.utils.JpaUtils.createJoinArrayAggOnId;
 import static io.openbas.utils.ResultUtils.computeTargetResults;
 import static io.openbas.utils.StringUtils.duplicateString;
 import static io.openbas.utils.pagination.SortUtilsCriteriaBuilder.toSortCriteriaBuilder;
+import static java.time.Instant.now;
 import static java.util.Optional.ofNullable;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -55,10 +59,12 @@ public class ExerciseService {
     private final GrantService grantService;
     private final InjectService injectService;
     private final InjectDuplicateService injectDuplicateService;
+    private final TeamService teamService;
     private final VariableService variableService;
 
     private final ArticleRepository articleRepository;
     private final ExerciseRepository exerciseRepository;
+    private final TeamRepository teamRepository;
 
     // region properties
     @Value("${openbas.mail.imap.enabled}")
@@ -127,7 +133,7 @@ public class ExerciseService {
         }
 
         // -- Count Query --
-        Long total = countQuery(cb, this.entityManager);
+        Long total = countQuery(cb, this.entityManager, Exercise.class, specification);
 
         return new PageImpl<>(exercises, pageable, total);
     }
@@ -202,6 +208,20 @@ public class ExerciseService {
             return exerciseRepository.save(exercise);
     }
 
+    // -- READ --
+
+    public Exercise exercise(@NotBlank final String exerciseId) {
+        return this.exerciseRepository.findById(exerciseId)
+            .orElseThrow(() -> new ElementNotFoundException("Exercise not found"));
+    }
+
+    // -- UPDATE --
+
+    public Exercise updateExercise(@NotNull final Exercise exercise) {
+        exercise.setUpdatedAt(now());
+        return this.exerciseRepository.save(exercise);
+    }
+
     // -- DUPLICATION --
 
     @Transactional
@@ -210,8 +230,11 @@ public class ExerciseService {
         Exercise exercise = copyExercice(exerciseOrigin);
         Exercise exerciseDuplicate = exerciseRepository.save(exercise);
         getListOfDuplicatedInjects(exerciseDuplicate, exerciseOrigin);
+        getListOfExerciseTeams(exerciseDuplicate, exerciseOrigin);
         getListOfArticles(exerciseDuplicate, exerciseOrigin);
         getListOfVariables(exerciseDuplicate, exerciseOrigin);
+        getObjectives(exerciseDuplicate, exerciseOrigin);
+        getLessonsCategories(exerciseDuplicate, exerciseOrigin);
         return exerciseRepository.save(exercise);
     }
 
@@ -231,12 +254,39 @@ public class ExerciseService {
         exerciseDuplicate.setLogoLight(exerciseOrigin.getLogoLight());
         exerciseDuplicate.setGrants(new ArrayList<>(exerciseOrigin.getGrants()));
         exerciseDuplicate.setTags(new HashSet<>(exerciseOrigin.getTags()));
-        exerciseDuplicate.setTeams(new ArrayList<>(exerciseOrigin.getTeams()));
         exerciseDuplicate.setTeamUsers(new ArrayList<>(exerciseOrigin.getTeamUsers()));
         exerciseDuplicate.setReplyTos(new ArrayList<>(exerciseOrigin.getReplyTos()));
         exerciseDuplicate.setDocuments(new ArrayList<>(exerciseOrigin.getDocuments()));
-        exerciseDuplicate.setObjectives(new ArrayList<>(exerciseOrigin.getObjectives()));
+        exerciseDuplicate.setLessonsAnonymized(exerciseOrigin.isLessonsAnonymized());
         return exerciseDuplicate;
+    }
+
+    private void getListOfExerciseTeams(@NotNull Exercise exercise,@NotNull Exercise exerciseOrigin){
+        Map<String, Team> contextualTeams = new HashMap<>();
+        List<Team> exerciseTeams = new ArrayList<>();
+        exerciseOrigin.getTeams().forEach(scenarioTeam -> {
+            if (scenarioTeam.getContextual()) {
+                Team team = teamService.copyContextualTeam(scenarioTeam);
+                Team teamSaved = this.teamRepository.save(team);
+                exerciseTeams.add(teamSaved);
+                contextualTeams.put(scenarioTeam.getId(), teamSaved);
+            } else {
+                exerciseTeams.add(scenarioTeam);
+            }
+        });
+        exercise.setTeams(new ArrayList<>(exerciseTeams));
+
+        exercise.getInjects().forEach(inject -> {
+            List<Team> teams = new ArrayList<>();
+            inject.getTeams().forEach(team -> {
+                if (team.getContextual()) {
+                    teams.add(contextualTeams.get(team.getId()));
+                } else {
+                    teams.add(team);
+                }
+            });
+            inject.setTeams(teams);
+        });
     }
 
     private void getListOfDuplicatedInjects(Exercise exercise, Exercise exerciseOrigin) {
@@ -295,6 +345,66 @@ public class ExerciseService {
             return variable1;
         }).toList();
         variableService.createVariables(variableList);
+    }
+
+    private void getLessonsCategories(Exercise duplicatedExercise, Exercise originalExercise){
+        List<LessonsCategory> duplicatedCategories = new ArrayList<>();
+        for (LessonsCategory originalCategory : originalExercise.getLessonsCategories()) {
+            LessonsCategory duplicatedCategory = new LessonsCategory();
+            duplicatedCategory.setName(originalCategory.getName());
+            duplicatedCategory.setDescription(originalCategory.getDescription());
+            duplicatedCategory.setOrder(originalCategory.getOrder());
+            duplicatedCategory.setExercise(duplicatedExercise);
+            duplicatedCategory.setTeams(new ArrayList<>(originalCategory.getTeams()));
+
+            List<LessonsQuestion> duplicatedQuestions = new ArrayList<>();
+            for (LessonsQuestion originalQuestion : originalCategory.getQuestions()) {
+                LessonsQuestion duplicatedQuestion = new LessonsQuestion();
+                duplicatedQuestion.setCategory(originalQuestion.getCategory());
+                duplicatedQuestion.setContent(originalQuestion.getContent());
+                duplicatedQuestion.setExplanation(originalQuestion.getExplanation());
+                duplicatedQuestion.setOrder(originalQuestion.getOrder());
+                duplicatedQuestion.setCategory(duplicatedCategory);
+
+                List<LessonsAnswer> duplicatedAnswers = new ArrayList<>();
+                for (LessonsAnswer originalAnswer : originalQuestion.getAnswers()) {
+                    LessonsAnswer duplicatedAnswer = new LessonsAnswer();
+                    duplicatedAnswer.setUser(originalAnswer.getUser());
+                    duplicatedAnswer.setScore(originalAnswer.getScore());
+                    duplicatedAnswer.setPositive(originalAnswer.getPositive());
+                    duplicatedAnswer.setNegative(originalAnswer.getNegative());
+                    duplicatedAnswer.setQuestion(duplicatedQuestion);
+                    duplicatedAnswers.add(duplicatedAnswer);
+                }
+                duplicatedQuestion.setAnswers(duplicatedAnswers);
+                duplicatedQuestions.add(duplicatedQuestion);
+            }
+            duplicatedCategory.setQuestions(duplicatedQuestions);
+            duplicatedCategories.add(duplicatedCategory);
+        }
+        duplicatedExercise.setLessonsCategories(duplicatedCategories);
+    }
+
+    private void getObjectives(Exercise duplicatedExercise, Exercise originalExercise){
+        List<Objective> duplicatedObjectives = new ArrayList<>();
+        for (Objective originalObjective : originalExercise.getObjectives()) {
+            Objective duplicatedObjective = new Objective();
+            duplicatedObjective.setTitle(originalObjective.getTitle());
+            duplicatedObjective.setDescription(originalObjective.getDescription());
+            duplicatedObjective.setPriority(originalObjective.getPriority());
+            List<Evaluation> duplicatedEvaluations = new ArrayList<>();
+            for (Evaluation originalEvaluation : originalObjective.getEvaluations()) {
+                Evaluation duplicatedEvaluation = new Evaluation();
+                duplicatedEvaluation.setScore(originalEvaluation.getScore());
+                duplicatedEvaluation.setUser(originalEvaluation.getUser());
+                duplicatedEvaluation.setObjective(duplicatedObjective);
+                duplicatedEvaluations.add(duplicatedEvaluation);
+            }
+            duplicatedObjective.setEvaluations(duplicatedEvaluations);
+            duplicatedObjective.setExercise(duplicatedExercise);
+            duplicatedObjectives.add(duplicatedObjective);
+        }
+        duplicatedExercise.setObjectives(duplicatedObjectives);
     }
 
 }

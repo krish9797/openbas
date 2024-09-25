@@ -10,16 +10,23 @@ import jakarta.validation.constraints.NotNull;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
-import java.time.Instant;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.springframework.util.StringUtils.hasText;
 
 public class SchemaUtils {
+
+  private SchemaUtils() {
+
+  }
 
   private static final List<Class<?>> REQUIRED_ANNOTATIONS = List.of(
       NotNull.class,
@@ -27,109 +34,129 @@ public class SchemaUtils {
       Email.class
   );
 
-  public static final Class<?>[] BASE_CLASSES = {
-      byte.class,
-      short.class,
-      int.class,
-      long.class,
-      float.class,
-      double.class,
-      char.class,
-      boolean.class,
-      Byte.class,
-      Short.class,
-      Integer.class,
-      Long.class,
-      Float.class,
-      Double.class,
-      Character.class,
-      Boolean.class,
-      String.class,
-      Instant.class,
-  };
-
   private static final ConcurrentHashMap<Class<?>, List<PropertySchema>> cacheMap = new ConcurrentHashMap<>();
 
-  /**
-   * Build schema for a specific class
-   */
+  // -- SCHEMA --
+
   public static List<PropertySchema> schema(@NotNull Class<?> clazz) {
-    List<PropertySchema> properties = cacheMap.get(clazz);
+    return cacheMap.computeIfAbsent(clazz, SchemaUtils::computeSchema);
+  }
 
-    if (properties == null) {
-      Field[] fields = clazz.getDeclaredFields();
-      properties = new ArrayList<>(computeProperties(clazz, fields));
+  private static List<PropertySchema> computeSchema(Class<?> clazz) {
+    List<PropertySchema> properties = new ArrayList<>();
 
-      while (clazz.getSuperclass() != null) {
-        clazz = clazz.getSuperclass();
-        fields = clazz.getDeclaredFields();
-        properties.addAll(computeProperties(clazz, fields));
-      }
-
-      cacheMap.put(clazz, properties);
+    while (clazz != null) {
+      properties.addAll(computeProperties(clazz.getDeclaredFields()));
+      properties.addAll(computeMethods(clazz.getDeclaredMethods()));
+      clazz = clazz.getSuperclass();
     }
 
     return properties;
   }
 
-  private static List<PropertySchema> computeProperties(
-      @NotNull final Class<?> clazz,
-      @NotNull final Field[] fields) {
-    return Arrays.stream(fields).map(field -> {
-      PropertySchema.PropertySchemaBuilder builder = PropertySchema.builder()
-          .name(field.getName())
-          .type(field.getType())
-          .multiple(field.getType().isArray() || Collection.class.isAssignableFrom(field.getType()));
+  // -- PROPERTIES --
 
-      // Enum type -> compute available values
-      if (field.getType().isEnum()) {
-        Object[] enumValues = field.getType().getEnumConstants();
-        List<String> enumNames = new ArrayList<>();
-        for (Object enumValue : enumValues) {
-          enumNames.add(enumValue.toString());
-        }
-        builder.availableValues(enumNames);
-      }
-
-      Annotation[] annotations = field.getDeclaredAnnotations();
-      for (Annotation annotation : annotations) {
-        // Json property name
-        if (annotation.annotationType().equals(JsonProperty.class)) {
-          builder.jsonName(((JsonProperty) annotation).value());
-        }
-        // Unicity
-        if (annotation.annotationType().equals(Column.class)) {
-          builder.unicity(((Column) annotation).unique());
-        }
-        // Required
-        if (REQUIRED_ANNOTATIONS.contains(annotation.annotationType())) {
-          builder.mandatory(true);
-        }
-        // Queryable
-        if (annotation.annotationType().equals(Queryable.class)) {
-          Queryable queryable = field.getAnnotation(Queryable.class);
-          builder.searchable(queryable.searchable());
-          builder.filterable(queryable.filterable());
-          builder.sortable(queryable.sortable());
-          String propertyValue = queryable.property();
-          if (hasText(propertyValue)) {
-            builder.propertyRepresentative(propertyValue);
-          }
-        }
-        // Join table
-        if (annotation.annotationType().equals(JoinTable.class)) {
-          PropertySchema.JoinTable joinTableProperty = PropertySchema.JoinTable.builder()
-              .joinOn(field.getName())
-              .build();
-          builder.joinTable(joinTableProperty);
-        }
-      }
-
-      return builder.build();
-    }).toList();
+  private static List<PropertySchema> computeProperties(@NotNull Field[] fields) {
+    return Arrays.stream(fields)
+        .map(SchemaUtils::buildPropertySchemaFromField)
+        .collect(Collectors.toList());
   }
 
-  public static <T> PropertySchema retrieveProperty(List<PropertySchema> propertySchemas, String jsonFieldPath) {
+  private static PropertySchema buildPropertySchemaFromField(Field field) {
+    PropertySchema.PropertySchemaBuilder builder = PropertySchema.builder()
+        .name(field.getName())
+        .type(field.getType())
+        .multiple(field.getType().isArray() || Collection.class.isAssignableFrom(field.getType()));
+
+    if (field.getType().isEnum() || (field.getType().isArray() && field.getType().getComponentType().isEnum())) {
+      builder.availableValues(
+          getEnumNames(field.getType().isArray() ? field.getType().getComponentType() : field.getType()));
+    }
+
+    for (Annotation annotation : field.getDeclaredAnnotations()) {
+      processAnnotations(builder, annotation, field);
+    }
+
+    return builder.build();
+  }
+
+  // -- METHODS --
+
+  private static List<PropertySchema> computeMethods(@NotNull Method[] methods) {
+    return Arrays.stream(methods)
+        .map(SchemaUtils::buildPropertySchemaFromMethod)
+        .collect(Collectors.toList());
+  }
+
+  private static PropertySchema buildPropertySchemaFromMethod(Method method) {
+    PropertySchema.PropertySchemaBuilder builder = PropertySchema.builder()
+        .name(method.getName())
+        .type(method.getReturnType())
+        .multiple(method.getReturnType().isArray() || Collection.class.isAssignableFrom(method.getReturnType()));
+
+    if (method.getReturnType().isEnum()) {
+      builder.availableValues(getEnumNames(method.getReturnType()));
+    } else if (method.getReturnType().isArray() || method.getGenericReturnType() instanceof ParameterizedType) {
+      Class enumType = null;
+      if (method.getReturnType().isArray()) {
+        enumType = method.getReturnType().getComponentType();
+      } else {
+        Type typeArgument = ((ParameterizedType) method.getGenericReturnType()).getActualTypeArguments()[0];
+        if (typeArgument instanceof Class<?>) {
+          enumType = (Class<?>) typeArgument;
+        }
+      }
+      if (enumType != null && enumType.isEnum()) {
+        builder.availableValues(getEnumNames(enumType));
+      }
+    }
+
+    for (Annotation annotation : method.getDeclaredAnnotations()) {
+      processAnnotations(builder, annotation, method);
+    }
+
+    return builder.build();
+  }
+
+  private static List<String> getEnumNames(Class<?> enumType) {
+    return Arrays.stream(enumType.getEnumConstants())
+        .map(Object::toString)
+        .collect(Collectors.toList());
+  }
+
+  private static void processAnnotations(
+      @NotNull final PropertySchema.PropertySchemaBuilder builder,
+      @NotNull final Annotation annotation,
+      @NotNull final Object member) {
+
+    if (annotation.annotationType().equals(JsonProperty.class)) {
+      builder.jsonName(((JsonProperty) annotation).value());
+    } else if (annotation.annotationType().equals(Column.class)) {
+      builder.unicity(((Column) annotation).unique());
+    } else if (REQUIRED_ANNOTATIONS.contains(annotation.annotationType())) {
+      builder.mandatory(true);
+    } else if (annotation.annotationType().equals(Queryable.class)) {
+      Queryable queryable = member instanceof Field
+          ? ((Field) member).getAnnotation(Queryable.class)
+          : ((Method) member).getAnnotation(Queryable.class);
+      if (queryable != null) {
+        builder.searchable(queryable.searchable())
+            .filterable(queryable.filterable())
+            .dynamicValues(queryable.dynamicValues())
+            .sortable(queryable.sortable())
+            .path(queryable.path());
+        if (member instanceof Method) {
+          builder.type(queryable.clazz()); // Override
+        } else if (member instanceof Field && hasText(queryable.path())) {
+          builder.type(queryable.clazz()); // Override
+        }
+      }
+    } else if (annotation.annotationType().equals(JoinTable.class)) {
+      builder.joinTable(PropertySchema.JoinTable.builder().joinOn(((Field) member).getName()).build());
+    }
+  }
+
+  public static PropertySchema retrieveProperty(List<PropertySchema> propertySchemas, String jsonFieldPath) {
     if (jsonFieldPath.contains("\\.")) {
       throw new IllegalArgumentException("Deep path is not allowed");
     }
@@ -137,19 +164,19 @@ public class SchemaUtils {
     return propertySchemas.stream()
         .filter(p -> jsonFieldPath.equals(p.getJsonName()))
         .findFirst()
-        .orElseThrow();
+        .orElseThrow(
+            () -> new IllegalArgumentException("This path is not handled by Queryable annotation: " + jsonFieldPath));
   }
 
   public static List<PropertySchema> getSearchableProperties(List<PropertySchema> propertySchemas) {
-    return propertySchemas.stream().filter(PropertySchema::isSearchable).toList();
+    return propertySchemas.stream().filter(PropertySchema::isSearchable).collect(Collectors.toList());
   }
 
   public static List<PropertySchema> getFilterableProperties(List<PropertySchema> propertySchemas) {
-    return propertySchemas.stream().filter(PropertySchema::isFilterable).toList();
+    return propertySchemas.stream().filter(PropertySchema::isFilterable).collect(Collectors.toList());
   }
 
   public static List<PropertySchema> getSortableProperties(List<PropertySchema> propertySchemas) {
-    return propertySchemas.stream().filter(PropertySchema::isSortable).toList();
+    return propertySchemas.stream().filter(PropertySchema::isSortable).collect(Collectors.toList());
   }
-
 }

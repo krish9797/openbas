@@ -1,40 +1,44 @@
-import React, { FunctionComponent, useContext, useEffect, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  IconButton,
-  Menu,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-  SnackbarCloseReason,
-  Link,
-} from '@mui/material';
+import React, { FunctionComponent, useContext, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button, Dialog, DialogActions, DialogContent, DialogContentText, IconButton, Menu, MenuItem, Table, TableBody, TableCell, TableRow } from '@mui/material';
 import { MoreVert } from '@mui/icons-material';
 import { useFormatter } from '../../../../components/i18n';
 import Transition from '../../../../components/common/Transition';
-import type { InjectStore } from '../../../../actions/injects/Inject';
 import { InjectContext, PermissionsContext } from '../Context';
-import type { Inject, InjectStatus, InjectStatusExecution, Tag } from '../../../../utils/api-types';
-import { duplicateInjectForExercise, duplicateInjectForScenario, tryInject, testInject } from '../../../../actions/Inject';
+import type { Inject, InjectStatus, InjectStatusExecution, InjectTestStatus } from '../../../../utils/api-types';
+import { duplicateInjectForExercise, duplicateInjectForScenario } from '../../../../actions/Inject';
+import { testInject } from '../../../../actions/injects/inject-action';
 import { useAppDispatch } from '../../../../utils/hooks';
 import DialogDuplicate from '../../../../components/common/DialogDuplicate';
 import { useHelper } from '../../../../store';
 import type { ExercisesHelper } from '../../../../actions/exercises/exercise-helper';
+import DialogTest from '../../../../components/common/DialogTest';
+import { MESSAGING$ } from '../../../../utils/Environment';
+import type { InjectStore } from '../../../../actions/injects/Inject';
+
+type InjectPopoverType = {
+  inject_id: string,
+  inject_exercise?: string,
+  inject_scenario?: string,
+  inject_status?: InjectStatus,
+  inject_testable?: boolean,
+  inject_teams?: string[],
+  inject_type?: string,
+  inject_enabled?: boolean,
+  inject_title?: string,
+};
 
 interface Props {
-  inject: InjectStore;
-  tagsMap: Record<string, Tag>;
+  inject: InjectPopoverType;
   setSelectedInjectId: (injectId: Inject['inject_id']) => void;
   isDisabled: boolean;
   canBeTested?: boolean;
+  canDone?: boolean;
+  canTriggerNow?: boolean;
   exerciseOrScenarioId?: string;
+  onCreate?: (result: { result: string, entities: { injects: Record<string, InjectStore> } }) => void;
+  onUpdate?: (result: { result: string, entities: { injects: Record<string, InjectStore> } }) => void;
+  onDelete?: (result: string) => void;
 }
 
 const InjectPopover: FunctionComponent<Props> = ({
@@ -42,7 +46,12 @@ const InjectPopover: FunctionComponent<Props> = ({
   setSelectedInjectId,
   isDisabled,
   canBeTested = false,
+  canDone = false,
+  canTriggerNow = false,
   exerciseOrScenarioId,
+  onCreate,
+  onUpdate,
+  onDelete,
 }) => {
   // Standard hooks
   const { t } = useFormatter();
@@ -57,7 +66,6 @@ const InjectPopover: FunctionComponent<Props> = ({
 
   const [openDelete, setOpenDelete] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
-  const [openTry, setOpenTry] = useState(false);
   const [openTest, setOpenTest] = useState(false);
   const [openEnable, setOpenEnable] = useState(false);
   const [openDisable, setOpenDisable] = useState(false);
@@ -65,7 +73,6 @@ const InjectPopover: FunctionComponent<Props> = ({
   const [openResult, setOpenResult] = useState(false);
   const [openTrigger, setOpenTrigger] = useState(false);
   const [injectResult, setInjectResult] = useState<InjectStatus | null>(null);
-  const [_injectTestResult, setInjectTestResult] = useState<InjectStatus | null>(null);
   const [anchorEl, setAnchorEl] = useState<Element | null>(null);
 
   const isExercise = useHelper((helper: ExercisesHelper) => helper.getExercisesMap()[exerciseOrScenarioId!] !== undefined);
@@ -81,90 +88,56 @@ const InjectPopover: FunctionComponent<Props> = ({
     setDuplicate(true);
     handlePopoverClose();
   };
-
   const handleCloseDuplicate = () => setDuplicate(false);
 
   const submitDuplicate = () => {
     if (inject.inject_exercise) {
-      dispatch(duplicateInjectForExercise(inject.inject_exercise, inject.inject_id));
+      dispatch(duplicateInjectForExercise(inject.inject_exercise, inject.inject_id)).then((result: { result: string, entities: { injects: Record<string, InjectStore> } }) => {
+        onCreate?.(result);
+      });
     }
     if (inject.inject_scenario) {
-      dispatch(duplicateInjectForScenario(inject.inject_scenario, inject.inject_id));
+      dispatch(duplicateInjectForScenario(inject.inject_scenario, inject.inject_id)).then((result: { result: string, entities: { injects: Record<string, InjectStore> } }) => {
+        onCreate?.(result);
+      });
     }
     handleCloseDuplicate();
-  };
-
-  const submitDuplicateHandler = () => {
-    submitDuplicate();
   };
 
   const handleOpenDelete = () => {
     setOpenDelete(true);
     handlePopoverClose();
   };
-
   const handleCloseDelete = () => setOpenDelete(false);
 
   const submitDelete = () => {
-    onDeleteInject(inject.inject_id);
-    handleCloseDelete();
+    onDeleteInject(inject.inject_id).then(() => {
+      onDelete?.(inject.inject_id);
+      handleCloseDelete();
+    });
   };
-
-  const handleCloseTry = () => setOpenTry(false);
 
   const handleCloseResult = () => {
     setOpenResult(false);
     setInjectResult(null);
   };
 
-  const submitTry = () => {
-    // FIXME: remove try possibility
-    dispatch(tryInject(inject.inject_id)).then((payload: InjectStatus) => {
-      setInjectResult(payload);
-      setOpenResult(true);
-    });
-    handleCloseTry();
-  };
-
   const handleOpenTest = () => {
     setOpenTest(true);
     handlePopoverClose();
   };
-
-  const handleCloseTest = () => {
-    setOpenTest(false);
-    setInjectTestResult(null);
-  };
-
-  const [openDialog, setOpenDialog] = React.useState<boolean>(false);
-  const handleCloseDialog = (
-    event?: React.SyntheticEvent | Event,
-    reason?: SnackbarCloseReason,
-  ) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setOpenDialog(false);
-  };
-  const [detailsLink, setDetailsLink] = React.useState<string>('');
-
-  useEffect(() => {
-    if (openDialog) {
-      setTimeout(() => {
-        handleCloseDialog();
-        setDetailsLink('');
-      }, 6000);
-    }
-  }, [openDialog]);
+  const handleCloseTest = () => setOpenTest(false);
 
   const submitTest = () => {
-    testInject(inject.inject_id).then((result: { data: InjectStatus }) => {
-      setInjectTestResult(result.data);
-      setOpenDialog(true);
+    testInject(inject.inject_id).then((result: { data: InjectTestStatus }) => {
       if (isExercise) {
-        setDetailsLink(`/admin/exercises/${exerciseOrScenarioId}/tests/${result.data.status_id}`);
+        MESSAGING$.notifySuccess(t('Inject test has been sent, you can view test logs details on {itsDedicatedPage}.', {
+          itsDedicatedPage: <Link to={`/admin/exercises/${exerciseOrScenarioId}/tests/${result.data.status_id}`}>{t('its dedicated page')}</Link>,
+        }));
       } else {
-        setDetailsLink(`/admin/scenarios/${exerciseOrScenarioId}/tests/${result.data.status_id}`);
+        MESSAGING$.notifySuccess(t('Inject test has been sent, you can view test logs details on {itsDedicatedPage}.', {
+          itsDedicatedPage: <Link to={`/admin/scenarios/${exerciseOrScenarioId}/tests/${result.data.status_id}`}>{t('its dedicated page')}</Link>,
+        }));
       }
     });
     handleCloseTest();
@@ -174,11 +147,11 @@ const InjectPopover: FunctionComponent<Props> = ({
     setOpenEnable(true);
     handlePopoverClose();
   };
-
   const handleCloseEnable = () => setOpenEnable(false);
 
   const submitEnable = () => {
-    onUpdateInjectActivation(inject.inject_id, { inject_enabled: true }).then(() => {
+    onUpdateInjectActivation(inject.inject_id, { inject_enabled: true }).then((result) => {
+      onUpdate?.(result);
       handleCloseEnable();
     });
   };
@@ -187,13 +160,11 @@ const InjectPopover: FunctionComponent<Props> = ({
     setOpenDisable(true);
     handlePopoverClose();
   };
-
-  const handleCloseDisable = () => {
-    setOpenDisable(false);
-  };
+  const handleCloseDisable = () => setOpenDisable(false);
 
   const submitDisable = () => {
-    onUpdateInjectActivation(inject.inject_id, { inject_enabled: false }).then(() => {
+    onUpdateInjectActivation(inject.inject_id, { inject_enabled: false }).then((result) => {
+      onUpdate?.(result);
       handleCloseDisable();
     });
   };
@@ -202,12 +173,13 @@ const InjectPopover: FunctionComponent<Props> = ({
     setOpenDone(true);
     handlePopoverClose();
   };
-
   const handleCloseDone = () => setOpenDone(false);
 
   const submitDone = () => {
-    onInjectDone?.(inject.inject_id);
-    handleCloseDone();
+    onInjectDone?.(inject.inject_id).then((result) => {
+      onUpdate?.(result);
+      handleCloseDone();
+    });
   };
 
   const handleOpenEditContent = () => {
@@ -219,41 +191,17 @@ const InjectPopover: FunctionComponent<Props> = ({
     setOpenTrigger(true);
     handlePopoverClose();
   };
-
   const handleCloseTrigger = () => setOpenTrigger(false);
 
   const submitTrigger = () => {
-    onUpdateInjectTrigger?.(inject.inject_id);
-    handleCloseTrigger();
+    onUpdateInjectTrigger?.(inject.inject_id).then((result) => {
+      onUpdate?.(result);
+      handleCloseTrigger();
+    });
   };
 
   return (
     <>
-      <Dialog open={openDialog}
-        slotProps={{
-          backdrop: {
-            sx: {
-              backgroundColor: 'transparent',
-            },
-          },
-        }}
-        PaperProps={{
-          sx: {
-            position: 'fixed',
-            top: '20px',
-            left: '660px',
-            margin: 0,
-          },
-        }}
-      >
-        <Alert
-          onClose={handleCloseDialog}
-          severity="success"
-          sx={{ width: '100%' }}
-        >
-          {t('Inject test has been sent, you can view test logs details on ')} <Link href={detailsLink} underline="hover">{t('its dedicated page.')}</Link>
-        </Alert>
-      </Dialog>
       <IconButton
         onClick={handlePopoverOpen}
         aria-haspopup="true"
@@ -277,23 +225,20 @@ const InjectPopover: FunctionComponent<Props> = ({
         >
           {t('Update')}
         </MenuItem>
-        {!inject.inject_status && onInjectDone && (
-          <MenuItem
-            onClick={handleOpenDone}
-            disabled={isDisabled}
-          >
-            {t('Mark as done')}
-          </MenuItem>
+        {!inject.inject_status && onInjectDone && canDone && (
+        <MenuItem
+          onClick={handleOpenDone}
+          disabled={isDisabled}
+        >
+          {t('Mark as done')}
+        </MenuItem>
         )}
         {inject.inject_testable && canBeTested && (
-          <MenuItem
-            disabled={inject.inject_teams?.length === 0}
-            onClick={handleOpenTest}
-          >
+          <MenuItem onClick={handleOpenTest}>
             {t('Test')}
           </MenuItem>
         )}
-        {inject.inject_type !== 'openbas_manual' && onUpdateInjectTrigger && (
+        {inject.inject_type !== 'openbas_manual' && canTriggerNow && onUpdateInjectTrigger && (
           <MenuItem
             onClick={handleOpenTrigger}
             disabled={isDisabled || !permissions.isRunning}
@@ -301,15 +246,6 @@ const InjectPopover: FunctionComponent<Props> = ({
             {t('Trigger now')}
           </MenuItem>
         )}
-        {/* TODO create an atomic testing when using this button */}
-        {/* {inject.inject_type !== 'openbas_manual' && ( */}
-        {/*  <MenuItem */}
-        {/*    onClick={handleOpenTry} */}
-        {/*    disabled={isDisabled} */}
-        {/*  > */}
-        {/*    {t('Try the inject')} */}
-        {/*  </MenuItem> */}
-        {/* )} */}
         {inject.inject_enabled ? (
           <MenuItem
             onClick={handleOpenDisable}
@@ -332,7 +268,7 @@ const InjectPopover: FunctionComponent<Props> = ({
       <DialogDuplicate
         open={duplicate}
         handleClose={handleCloseDuplicate}
-        handleSubmit={submitDuplicateHandler}
+        handleSubmit={submitDuplicate}
         text={`${t('Do you want to duplicate this inject:')} ${inject.inject_title} ?`}
       />
       <Dialog
@@ -375,49 +311,12 @@ const InjectPopover: FunctionComponent<Props> = ({
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog
-        TransitionComponent={Transition}
-        open={openTry}
-        onClose={handleCloseTry}
-        PaperProps={{ elevation: 1 }}
-      >
-        <DialogContent>
-          <DialogContentText>
-            <p>{t(`Do you want to try this inject: ${inject.inject_title}?`)}</p>
-            <Alert severity="info">
-              {t('The inject will only be sent to you.')}
-            </Alert>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseTry}>
-            {t('Cancel')}
-          </Button>
-          <Button color="secondary" onClick={submitTry}>
-            {t('Try')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        TransitionComponent={Transition}
+      <DialogTest
         open={openTest}
-        onClose={handleCloseTest}
-        PaperProps={{ elevation: 1 }}
-      >
-        <DialogContent>
-          <DialogContentText>
-            <p>{`${t('Do you want to test this inject:')} ${inject.inject_title} ?`}</p>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseTest}>
-            {t('Cancel')}
-          </Button>
-          <Button color="secondary" onClick={submitTest}>
-            {t('Test')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        handleClose={handleCloseTest}
+        handleSubmit={submitTest}
+        text={`${t('Do you want to test this inject:')} ${inject.inject_title} ?`}
+      />
       <Dialog
         TransitionComponent={Transition}
         open={openEnable}

@@ -226,8 +226,8 @@ MD5: d604c952bb3c6d96621594d39992c499
 SHA1: 5b6087f87f5f2ae129f888bba799611836eb39a2
 SHA256: 98d1e64445bbef46a36d4724699a386646de78881a1b6f2b346122c76d696c12
 SHA512: ca07dc1d0a5297e29327e483f4f35dadb254d96a16a5c33da5ad048e6965a3863d621518a2be40f1a42226c68cbf5e779382a37ee5baa7dd7c538ec73ce059e8`,
-          displayedCode: `curl -s ${settings.platform_base_url}/api/agent/installer/openbas/linux/${userToken?.token_value} | sudo sh`,
-          code: `curl -s ${settings.platform_base_url}/api/agent/installer/openbas/linux/${userToken?.token_value} | sudo sh`,
+          displayedCode: `curl -s ${settings.platform_agent_url}/api/agent/installer/openbas/linux/${userToken?.token_value} | sudo sh`,
+          code: `curl -s ${settings.platform_agent_url}/api/agent/installer/openbas/linux/${userToken?.token_value} | sudo sh`,
         };
       case 'macos':
         return {
@@ -451,15 +451,7 @@ SHA512: ca07dc1d0a5297e29327e483f4f35dadb254d96a16a5c33da5ad048e6965a3863d621518
                   </Select>
                 </FormControl>
                 )}
-                <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 1 - Add antivirus exclusions')}</Typography>
-                <Alert variant="outlined" severity="info">
-                  {t('The agent will never execute directly any payload.')}
-                </Alert>
-                <p>
-                  {t('You will need to add proper antivirus exclusions for this agent (to ensure Caldera injects execution to work properly). It may not be necessary in the future but this is generally a good practice to ensure the agent will be always available.')}
-                </p>
-                <pre style={{ margin: '20px 0 10px 0' }}>{platformSelector().exclusions}</pre>
-                <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 2 - Install the agent')}</Typography>
+                <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 1 - Install the agent')}</Typography>
                 <Alert variant="outlined" severity="info">
                   {t('Installing the agent is requiring local administrator privileges.')}
                 </Alert>
@@ -490,19 +482,19 @@ SHA512: ca07dc1d0a5297e29327e483f4f35dadb254d96a16a5c33da5ad048e6965a3863d621518
                   </div>
                 </>
                 )}
+                <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 2 - Add antivirus exclusions')}</Typography>
+                <Alert variant="outlined" severity="info">
+                  {t('The agent will never execute directly any payload.')}
+                </Alert>
+                <p>
+                  {t('You will need to add proper antivirus exclusions for this agent (to ensure Caldera injects execution to work properly). It may not be necessary in the future but this is generally a good practice to ensure the agent will be always available.')}
+                </p>
+                <pre style={{ margin: '20px 0 10px 0' }}>{platformSelector().exclusions}</pre>
               </div>
               )}
             {currentSelectedExecutor.executor_type === 'openbas_agent' && (
             <div style={{ marginTop: 20 }}>
-              <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 1 - Add antivirus exclusions')}</Typography>
-              <Alert variant="outlined" severity="info">
-                {t('The agent will never execute directly any payload.')}
-              </Alert>
-              <p>
-                {t('You will need to add proper antivirus exclusions for this agent (to ensure Caldera injects execution to work properly). It may not be necessary in the future but this is generally a good practice to ensure the agent will be always available.')}
-              </p>
-              <pre style={{ margin: '20px 0 10px 0' }}>{platformAgentSelector().exclusions}</pre>
-              <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 2 - Install the agent')}</Typography>
+              <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 1 - Install the agent')}</Typography>
               <Alert variant="outlined" severity="info">
                 {t('Installing the agent is requiring local administrator privileges.')}
               </Alert>
@@ -530,6 +522,14 @@ SHA512: ca07dc1d0a5297e29327e483f4f35dadb254d96a16a5c33da5ad048e6965a3863d621518
                 </div>
               </>
               )}
+              <Typography variant="h2" style={{ marginTop: 30 }}>{t('Step 2 - Add antivirus exclusions')}</Typography>
+              <Alert variant="outlined" severity="info">
+                {t('The agent will never execute directly any payload.')}
+              </Alert>
+              <p>
+                {t('You will need to add proper antivirus exclusions for this agent (to ensure Caldera injects execution to work properly). It may not be necessary in the future but this is generally a good practice to ensure the agent will be always available.')}
+              </p>
+              <pre style={{ margin: '20px 0 10px 0' }}>{platformAgentSelector().exclusions}</pre>
             </div>
             )}
             {currentSelectedExecutor.executor_type === 'openbas_tanium' && (

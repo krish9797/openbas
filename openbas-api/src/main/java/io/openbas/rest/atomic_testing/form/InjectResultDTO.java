@@ -40,6 +40,9 @@ public class InjectResultDTO {
   @JsonProperty("inject_content")
   private ObjectNode content;
 
+  @JsonProperty("inject_commands_lines")
+  private InjectStatusCommandLine commandsLines;
+
   @JsonProperty("inject_expectations")
   private List<InjectExpectation> expectations;
 
@@ -63,6 +66,7 @@ public class InjectResultDTO {
 
   @JsonProperty("inject_status")
   private InjectStatus status;
+
   @Schema(
       description = "Specifies the categories of targetResults for atomic testing.",
       example = "assets, asset groups, teams, players"

@@ -312,7 +312,7 @@ export const storeHelper = (state) => ({
   getExercise: (id) => entity(id, 'exercises', state),
   getExerciseDryruns: (id) => entities('dryruns', state).filter((i) => i.dryrun_exercise === id),
   getExerciseComchecks: (id) => entities('comchecks', state).filter((i) => i.comcheck_exercise === id),
-  getExerciseTeams: (id) => entities('teams', state).filter((i) => i.team_exercises.includes(id)),
+  getExerciseTeams: (id) => entities('teams', state).filter((i) => i.team_exercises?.includes(id)),
   getExerciseVariables: (id) => entities('variables', state).filter((i) => i.variable_exercise === id),
   getExerciseArticles: (id) => entities('articles', state).filter((i) => i.article_exercise === id),
   getExerciseInjects: (id) => getInjectsWithParsedInjectorContractContent(entities('injects', state).filter((i) => i.inject_exercise === id)),
@@ -332,7 +332,7 @@ export const storeHelper = (state) => ({
   ),
   getExerciseUserLessonsAnswers: (exerciseId, userId) => entities('lessonsanswers', state).filter(
     (l) => l.lessons_answer_exercise === exerciseId
-      && l.lessons_answer_user === userId,
+            && l.lessons_answer_user === userId,
   ),
   getExerciseReports: (exerciseId) => entities('reports', state).filter((l) => l.report_exercise === exerciseId),
   // report
@@ -492,4 +492,11 @@ export const storeHelper = (state) => ({
   getTeamScenarioInjects: (id) => entities('injects', state).filter((i) => (entity(id, 'teams', state) || {}).team_scenario_injects?.includes(
     i.inject_id,
   )),
+  getScenarioObjectives: (id) => entities('objectives', state).filter((o) => o.objective_scenario === id),
+  getScenarioLessonsCategories: (id) => entities('lessonscategorys', state).filter(
+    (l) => l.lessons_category_scenario === id,
+  ),
+  getScenarioLessonsQuestions: (id) => entities('lessonsquestions', state).filter(
+    (l) => l.lessons_question_scenario === id,
+  ),
 });

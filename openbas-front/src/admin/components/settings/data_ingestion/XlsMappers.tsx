@@ -7,12 +7,13 @@ import Breadcrumbs from '../../../../components/Breadcrumbs';
 import SortHeadersComponent from '../../../../components/common/pagination/SortHeadersComponent';
 import type { RawPaginationImportMapper, SearchPaginationInput } from '../../../../utils/api-types';
 import { searchMappers } from '../../../../actions/mapper/mapper-actions';
-import { initSorting } from '../../../../components/common/pagination/Page';
+import { initSorting } from '../../../../components/common/queryable/Page';
 import Empty from '../../../../components/Empty';
 import DataIngestionMenu from '../DataIngestionMenu';
 import XlsMapperCreation from './xls_mapper/XlsMapperCreation';
 import PaginationComponent from '../../../../components/common/pagination/PaginationComponent';
 import XlsMapperPopover from './XlsMapperPopover';
+import { buildSearchPagination } from '../../../../components/common/queryable/QueryableUtils';
 import ImportUploaderMapper from './ImportUploaderMapper';
 
 const useStyles = makeStyles(() => ({
@@ -65,9 +66,9 @@ const XlsMappers = () => {
   ];
 
   const [mappers, setMappers] = useState<RawPaginationImportMapper[]>([]);
-  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>({
+  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>(buildSearchPagination({
     sorts: initSorting('import_mapper_name'),
-  });
+  }));
 
   return (
     <div className={classes.container}>
@@ -128,6 +129,7 @@ const XlsMappers = () => {
                 <ListItemSecondaryAction>
                   <XlsMapperPopover
                     mapper={mapper}
+                    onDuplicate={(result) => setMappers([result, ...mappers])}
                     onUpdate={(result) => setMappers(mappers.map((existing) => (existing.import_mapper_id !== result.import_mapper_id ? existing : result)))}
                     onDelete={(result) => setMappers(mappers.filter((existing) => (existing.import_mapper_id !== result)))}
                   />

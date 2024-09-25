@@ -22,8 +22,7 @@ import {
   Typography,
 } from '@mui/material';
 import { makeStyles, useTheme } from '@mui/styles';
-import { MarkerType, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow } from 'reactflow';
-import 'reactflow/dist/style.css';
+import { Edge, MarkerType, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, useReactFlow } from '@xyflow/react';
 import { AddBoxOutlined, MoreVertOutlined } from '@mui/icons-material';
 import type { InjectResultDTO, InjectTargetWithResult, InjectExpectationResult } from '../../../../utils/api-types';
 import { fetchInjectResultDto, fetchTargetResult } from '../../../../actions/atomic_testings/atomic-testing-actions';
@@ -43,6 +42,7 @@ import DetectionPreventionExpectationsValidationForm from '../../simulations/sim
 import { deleteInjectExpectationResult } from '../../../../actions/Exercise';
 import { useAppDispatch } from '../../../../utils/hooks';
 import type { InjectExpectationStore } from '../../../../actions/injects/Inject';
+import { NodeResultStep } from './types/nodes/NodeResultStep';
 import { isTechnicalExpectation } from '../../common/injects/expectations/ExpectationUtils';
 
 interface Steptarget {
@@ -66,9 +66,6 @@ const useStyles = makeStyles<Theme>((theme) => ({
     justifyContent: 'space-evenly',
     padding: '10px 20px 0 20px',
     textAlign: 'center',
-  },
-  resultCard: {
-    height: 120,
   },
   resultCardDummy: {
     height: 120,
@@ -117,15 +114,15 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
   const [initialized, setInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [targetResults, setTargetResults] = useState<InjectExpectationsStore[]>([]);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<NodeResultStep>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const initialSteps = [{ label: t('Attack started'), type: '', key: 'attack-started' }, { label: t('Attack ended'), type: '', key: 'attack-ended' }];
   const sortOrder = ['PREVENTION', 'DETECTION', 'MANUAL'];
   // Flow
   const layoutOptions: LayoutOptions = {
     algorithm: 'd3-hierarchy',
     direction: 'LR',
-    spacing: [150, 150],
+    spacing: [350, 350],
   };
   useAutoLayout(layoutOptions, targetResults);
   const { fitView } = useReactFlow();
@@ -205,7 +202,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
         id: `result-${index}`,
         type: 'result',
         data: {
-          key: step.key,
+          key: step.key ? step.key : '',
           label: step.label,
           start: index === 0,
           end: index === steps.length - 1,
@@ -302,7 +299,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
         isPayload={isNotEmptyField(inject.inject_injector_contract?.injector_contract_payload)}
         type={inject.inject_injector_contract?.injector_contract_payload
           ? inject.inject_injector_contract.injector_contract_payload.payload_collector_type
-                || inject.inject_injector_contract.injector_contract_payload.payload_type
+          || inject.inject_injector_contract.injector_contract_payload.payload_type
           : inject.inject_type}
       />
     );
@@ -344,9 +341,11 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
       const newSteps = Array.from(groupedBy).flatMap(([targetType, results]) => results.sort((a: InjectExpectationsStore, b: InjectExpectationsStore) => {
         if (a.inject_expectation_name && b.inject_expectation_name) {
           return a.inject_expectation_name.localeCompare(b.inject_expectation_name);
-        } if (a.inject_expectation_name && !b.inject_expectation_name) {
+        }
+        if (a.inject_expectation_name && !b.inject_expectation_name) {
           return -1; // a comes before b
-        } if (!a.inject_expectation_name && b.inject_expectation_name) {
+        }
+        if (!a.inject_expectation_name && b.inject_expectation_name) {
           return 1; // b comes before a
         }
         return a.inject_expectation_id.localeCompare(b.inject_expectation_id);
@@ -355,7 +354,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
         label: (
           <span>
             {getStatusLabel(targetType, [expectation.inject_expectation_status])}
-            <br/>{truncate(expectation.inject_expectation_name, 20)}
+            <br />{truncate(expectation.inject_expectation_name, 20)}
           </span>
         ),
         type: targetType,
@@ -372,7 +371,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
         id: `result-${index}`,
         type: 'result',
         data: {
-          key: step.key,
+          key: step.key ? step.key : '',
           label: step.label,
           start: index === 0,
           end: index === mergedSteps.length - 1,
@@ -453,6 +452,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
       </div>
       <div className={classes.container} style={{ width: '100%', height: 150 }}>
         <ReactFlow
+          colorMode={theme.palette.mode}
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -492,9 +492,11 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
             .toSorted((a, b) => {
               if (a.inject_expectation_name && b.inject_expectation_name) {
                 return a.inject_expectation_name.localeCompare(b.inject_expectation_name);
-              } if (a.inject_expectation_name && !b.inject_expectation_name) {
+              }
+              if (a.inject_expectation_name && !b.inject_expectation_name) {
                 return -1; // a comes before b
-              } if (!a.inject_expectation_name && b.inject_expectation_name) {
+              }
+              if (!a.inject_expectation_name && b.inject_expectation_name) {
                 return 1; // b comes before a
               }
               return a.inject_expectation_id.localeCompare(b.inject_expectation_id);
@@ -527,7 +529,7 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
                 <Grid container={true} spacing={2}>
                   {injectExpectation.inject_expectation_results && injectExpectation.inject_expectation_results.map((expectationResult, index) => (
                     <Grid key={index} item xs={4}>
-                      <Card key={injectExpectation.inject_expectation_id} classes={{ root: classes.resultCard }}>
+                      <Card key={injectExpectation.inject_expectation_id}>
                         <CardHeader
                           avatar={getAvatar(injectExpectation, expectationResult)}
                           action={
@@ -557,32 +559,32 @@ const TargetResultsDetailFlow: FunctionComponent<Props> = ({
                                 </MenuItem>
                               </Menu>
                             </>
-                        }
+                          }
                           title={expectationResult.sourceName ? t(expectationResult.sourceName) : t('Unknown')}
                           subheader={nsdt(expectationResult.date)}
                         />
-                        <CardContent>
+                        <CardContent sx={{ display: 'flex', alignItems: 'center' }}>
                           <ItemResult label={expectationResult.result} status={expectationResult.result} />
-                          <Tooltip title={t('Score')}><Chip classes={{ root: classes.score }} label={expectationResult.score}/></Tooltip>
+                          <Tooltip title={t('Score')}><Chip classes={{ root: classes.score }} label={expectationResult.score} /></Tooltip>
                         </CardContent>
                       </Card>
                     </Grid>
                   ))}
                   {(['DETECTION', 'PREVENTION'].includes(injectExpectation.inject_expectation_type) || (injectExpectation.inject_expectation_type === 'MANUAL' && injectExpectation.inject_expectation_results && injectExpectation.inject_expectation_results.length === 0))
                     && (
-                    <Grid item xs={4}>
-                      <Card classes={{ root: classes.resultCardDummy }}>
-                        <CardActionArea classes={{ root: classes.area }}
-                          onClick={() => setSelectedExpectationForCreation({
-                            injectExpectation,
-                            sourceIds: computeExistingSourceIds(injectExpectation.inject_expectation_results ?? []),
-                          })
-                        }
-                        >
-                          <AddBoxOutlined />
-                        </CardActionArea>
-                      </Card>
-                    </Grid>
+                      <Grid item xs={4}>
+                        <Card classes={{ root: classes.resultCardDummy }}>
+                          <CardActionArea classes={{ root: classes.area }}
+                            onClick={() => setSelectedExpectationForCreation({
+                              injectExpectation,
+                              sourceIds: computeExistingSourceIds(injectExpectation.inject_expectation_results ?? []),
+                            })
+                                          }
+                          >
+                            <AddBoxOutlined />
+                          </CardActionArea>
+                        </Card>
+                      </Grid>
                     )}
                 </Grid>
                 <Divider style={{ marginTop: 20 }} />

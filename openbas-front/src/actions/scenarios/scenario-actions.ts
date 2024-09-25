@@ -3,12 +3,17 @@ import { delReferential, getReferential, postReferential, putReferential, simple
 import { arrayOfScenarios, scenario } from './scenario-schema';
 import type {
   InjectsImportInput,
+  LessonsCategoryCreateInput,
+  LessonsCategoryTeamsInput,
+  LessonsCategoryUpdateInput,
+  LessonsInput,
+  LessonsQuestionCreateInput,
+  LessonsQuestionUpdateInput,
   Scenario,
   ScenarioInformationInput,
   ScenarioInput,
   ScenarioRecurrenceInput,
   ScenarioTeamPlayersEnableInput,
-  ScenarioUpdateTagsInput,
   ScenarioUpdateTeamsInput,
   SearchPaginationInput,
   Team,
@@ -72,11 +77,11 @@ export const duplicateScenario = (scenarioId: string) => (dispatch: Dispatch) =>
   return postReferential(scenario, uri, null)(dispatch);
 };
 
-// -- TAGS --
+// -- SCENARIO TO EXERCISE
 
-export const updateScenarioTags = (scenarioId: Scenario['scenario_id'], data: ScenarioUpdateTagsInput) => {
-  const uri = `${SCENARIO_URI}/${scenarioId}/tags`;
-  return putReferential(scenario, uri, data);
+export const createRunningExerciseFromScenario = (scenarioId: string) => {
+  const uri = `${SCENARIO_URI}/${scenarioId}/exercise/running`;
+  return simplePostCall(uri);
 };
 
 // -- TEAMS --
@@ -154,7 +159,7 @@ export const fetchScenarioStatistic = () => {
 
 // -- IMPORT --
 
-export const importXls = (scenarioId: Scenario['scenario_id'], importId: string, input: InjectsImportInput) => {
+export const importXlsForScenario = (scenarioId: Scenario['scenario_id'], importId: string, input: InjectsImportInput) => {
   const uri = `${SCENARIO_URI}/${scenarioId}/xls/${importId}/import`;
   return simplePostCall(uri, input)
     .then((response) => {
@@ -168,10 +173,89 @@ export const importXls = (scenarioId: Scenario['scenario_id'], importId: string,
     });
 };
 
-export const dryImportXls = (scenarioId: Scenario['scenario_id'], importId: string, input: InjectsImportInput) => {
+export const dryImportXlsForScenario = (scenarioId: Scenario['scenario_id'], importId: string, input: InjectsImportInput) => {
   const uri = `${SCENARIO_URI}/${scenarioId}/xls/${importId}/dry`;
   return simplePostCall(uri, input)
     .then((response) => {
       return response;
     });
+};
+
+// -- OPTION --
+
+export const searchScenarioAsOption = (searchText: string = '') => {
+  const params = { searchText };
+  return simpleCall(`${SCENARIO_URI}/options`, params);
+};
+
+export const searchScenarioByIdAsOption = (ids: string[]) => {
+  return simplePostCall(`${SCENARIO_URI}/options`, ids);
+};
+
+export const searchScenarioCategoryAsOption = (searchText: string = '') => {
+  const params = { searchText };
+  return simpleCall(`${SCENARIO_URI}/category/options`, params);
+};
+
+// -- LESSONS --
+
+export const updateScenarioLessons = (scenarioId: string, data: LessonsInput) => (dispatch: Dispatch) => putReferential(
+  scenario,
+  `/api/scenarios/${scenarioId}/lessons`,
+  data,
+)(dispatch);
+
+export const fetchLessonsCategories = (scenarioId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories`;
+  return getReferential(schema.arrayOfLessonsCategories, uri)(dispatch);
+};
+
+export const updateLessonsCategory = (scenarioId: string, lessonsCategoryId: string, data: LessonsCategoryUpdateInput) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}`;
+  return putReferential(schema.lessonsCategory, uri, data)(dispatch);
+};
+
+export const updateLessonsCategoryTeams = (scenarioId: string, lessonsCategoryId: string, data: LessonsCategoryTeamsInput) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}/teams`;
+  return putReferential(schema.lessonsCategory, uri, data)(dispatch);
+};
+
+export const addLessonsCategory = (scenarioId: string, data: LessonsCategoryCreateInput) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories`;
+  return postReferential(schema.lessonsCategory, uri, data)(dispatch);
+};
+
+export const deleteLessonsCategory = (scenarioId: string, lessonsCategoryId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}`;
+  return delReferential(uri, 'lessonscategorys', lessonsCategoryId)(dispatch);
+};
+
+export const applyLessonsTemplate = (scenarioId: string, lessonsTemplateId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_apply_template/${lessonsTemplateId}`;
+  return postReferential(schema.arrayOfLessonsCategories, uri, {})(dispatch);
+};
+
+export const fetchLessonsQuestions = (scenarioId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_questions`;
+  return getReferential(schema.arrayOfLessonsQuestions, uri)(dispatch);
+};
+
+export const updateLessonsQuestion = (scenarioId: string, lessonsCategoryId: string, lessonsQuestionId: string, data: LessonsQuestionUpdateInput) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}/lessons_questions/${lessonsQuestionId}`;
+  return putReferential(schema.lessonsQuestion, uri, data)(dispatch);
+};
+
+export const addLessonsQuestion = (scenarioId: string, lessonsCategoryId: string, data: LessonsQuestionCreateInput) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}/lessons_questions`;
+  return postReferential(schema.lessonsQuestion, uri, data)(dispatch);
+};
+
+export const deleteLessonsQuestion = (scenarioId: string, lessonsCategoryId: string, lessonsQuestionId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_categories/${lessonsCategoryId}/lessons_questions/${lessonsQuestionId}`;
+  return delReferential(uri, 'lessonsquestions', lessonsQuestionId)(dispatch);
+};
+
+export const emptyLessonsCategories = (scenarioId: string) => (dispatch: Dispatch) => {
+  const uri = `/api/scenarios/${scenarioId}/lessons_empty`;
+  return postReferential(schema.arrayOfLessonsCategories, uri, {})(dispatch);
 };

@@ -10,7 +10,7 @@ import { simpleCall, simpleDelCall, simplePostCall, simplePutCall } from '../../
 
 const XLS_MAPPER_URI = '/api/mappers';
 
-export const searchMappers = (searchPaginationInput: SearchPaginationInput) => {
+export const searchMappers = (searchPaginationInput: Partial<SearchPaginationInput>) => {
   const data = searchPaginationInput;
   const uri = `${XLS_MAPPER_URI}/search`;
   return simplePostCall(uri, data);
@@ -23,11 +23,15 @@ export const fetchMapper = (mapperId: string) => {
 
 export const deleteMapper = (mapperId: RawPaginationImportMapper['import_mapper_id']) => {
   const uri = `${XLS_MAPPER_URI}/${mapperId}`;
-  return simpleDelCall(uri, mapperId);
+  return simpleDelCall(uri);
 };
 
 export const createMapper = (data: ImportMapperAddInput) => {
   return simplePostCall(XLS_MAPPER_URI, data);
+};
+
+export const duplicateMapper = (mapperId: string) => {
+  return simplePostCall(`${XLS_MAPPER_URI}/${mapperId}`, mapperId);
 };
 
 export const updateMapper = (mapperId: string, data: ImportMapperUpdateInput) => {

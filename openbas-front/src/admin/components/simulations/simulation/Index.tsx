@@ -1,6 +1,6 @@
-import React, { FunctionComponent, lazy, Suspense } from 'react';
+import React, { FunctionComponent, lazy, Suspense, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { Box, Tab, Tabs } from '@mui/material';
+import { Alert, AlertTitle, Box, Tab, Tabs } from '@mui/material';
 import { makeStyles } from '@mui/styles';
 import { fetchExercise } from '../../../../actions/Exercise';
 import { errorWrapper } from '../../../../components/Error';
@@ -22,7 +22,7 @@ import injectContextForExercise from './ExerciseContext';
 const Exercise = lazy(() => import('./overview/Exercise'));
 const Dryrun = lazy(() => import('./controls/Dryrun'));
 const Comcheck = lazy(() => import('./controls/Comcheck'));
-const Lessons = lazy(() => import('./lessons/Lessons'));
+const Lessons = lazy(() => import('./lessons/ExerciseLessons'));
 const ExerciseDefinition = lazy(() => import('./ExerciseDefinition'));
 const Injects = lazy(() => import('./injects/ExerciseInjects'));
 const Tests = lazy(() => import('./tests/ExerciseTests'));
@@ -156,18 +156,29 @@ const IndexComponent: FunctionComponent<{ exercise: ExerciseType }> = ({
 
 const Index = () => {
   // Standard hooks
+  const [loading, setLoading] = useState(true);
+  const { t } = useFormatter();
   const dispatch = useAppDispatch();
   // Fetching data
   const { exerciseId } = useParams() as { exerciseId: ExerciseType['exercise_id'] };
   const exercise = useHelper((helper: ExercisesHelper) => helper.getExercise(exerciseId));
   useDataLoader(() => {
-    dispatch(fetchExercise(exerciseId));
+    setLoading(true);
+    dispatch(fetchExercise(exerciseId)).finally(() => setLoading(false));
   });
 
   const exerciseInjectContext = injectContextForExercise(exercise);
 
-  if (!exercise) {
+  if (loading) {
     return <Loader />;
+  }
+  if (!loading && !exercise) {
+    return (
+      <Alert severity="warning">
+        <AlertTitle>{t('Warning')}</AlertTitle>
+        {t('Simulation is currently unavailable or you do not have sufficient permissions to access it.')}
+      </Alert>
+    );
   }
   return (
     <InjectContext.Provider value={exerciseInjectContext}>

@@ -1,6 +1,6 @@
 import React, { FunctionComponent, lazy, Suspense, useState } from 'react';
 import { Link, Route, Routes, useLocation, useParams } from 'react-router-dom';
-import { Box, IconButton, Tab, Tabs, Tooltip } from '@mui/material';
+import { Alert, AlertTitle, Box, IconButton, Tab, Tabs, Tooltip } from '@mui/material';
 import cronstrue from 'cronstrue';
 import { makeStyles, useTheme } from '@mui/styles';
 import { UpdateOutlined } from '@mui/icons-material';
@@ -26,6 +26,7 @@ const Scenario = lazy(() => import('./Scenario'));
 const ScenarioDefinition = lazy(() => import('./ScenarioDefinition'));
 const Injects = lazy(() => import('./injects/ScenarioInjects'));
 const Tests = lazy(() => import('./tests/ScenarioTests'));
+const Lessons = lazy(() => import('./lessons/ScenarioLessons'));
 
 // eslint-disable-next-line no-underscore-dangle
 const _MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -59,8 +60,11 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
   let tabValue = location.pathname;
   if (location.pathname.includes(`/admin/scenarios/${scenario.scenario_id}/definition`)) {
     tabValue = `/admin/scenarios/${scenario.scenario_id}/definition`;
+  } else if (location.pathname.includes(`/admin/scenarios/${scenario.scenario_id}/tests`)) {
+    tabValue = `/admin/scenarios/${scenario.scenario_id}/tests`;
   }
   const [openScenarioRecurringFormDialog, setOpenScenarioRecurringFormDialog] = useState<boolean>(false);
+  const [openInstantiateSimulationAndStart, setOpenInstantiateSimulationAndStart] = useState<boolean>(false);
   const [selectRecurring, setSelectRecurring] = useState('noRepeat');
   const [cronExpression, setCronExpression] = useState<string | null>(scenario.scenario_recurrence || null);
   const [parsedCronExpression, setParsedCronExpression] = useState<ParsedCron | null>(scenario.scenario_recurrence ? parseCron(scenario.scenario_recurrence) : null);
@@ -71,7 +75,7 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
     if (!cronExpression || !parsedCronExpression) {
       return null;
     }
-    let sentence = '';
+    let sentence: string;
     if (noRepeat) {
       sentence = `${fld(scenario.scenario_recurrence_start)} ${t('recurrence_at')} ${ft(new Date().setUTCHours(parsedCronExpression.h, parsedCronExpression.m, 0))}`;
     } else {
@@ -107,6 +111,8 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
             selectRecurring={selectRecurring}
             setOpenScenarioRecurringFormDialog={setOpenScenarioRecurringFormDialog}
             openScenarioRecurringFormDialog={openScenarioRecurringFormDialog}
+            setOpenInstantiateSimulationAndStart={setOpenInstantiateSimulationAndStart}
+            openInstantiateSimulationAndStart={openInstantiateSimulationAndStart}
             noRepeat={noRepeat}
           />
           <Box
@@ -141,6 +147,12 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
                 value={`/admin/scenarios/${scenario.scenario_id}/tests`}
                 label={t('Tests')}
               />
+              <Tab
+                component={Link}
+                to={`/admin/scenarios/${scenario.scenario_id}/lessons`}
+                value={`/admin/scenarios/${scenario.scenario_id}/lessons`}
+                label={t('Lessons learned')}
+              />
             </Tabs>
             <div className={classes.scheduling}>
               {!cronExpression && (
@@ -166,10 +178,11 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
           </Box>
           <Suspense fallback={<Loader />}>
             <Routes>
-              <Route path="" element={errorWrapper(Scenario)({ setOpenScenarioRecurringFormDialog })} />
+              <Route path="" element={errorWrapper(Scenario)({ setOpenInstantiateSimulationAndStart })} />
               <Route path="definition" element={errorWrapper(ScenarioDefinition)()} />
               <Route path="injects" element={errorWrapper(Injects)()} />
               <Route path="tests/:statusId?" element={errorWrapper(Tests)()} />
+              <Route path="lessons" element={errorWrapper(Lessons)()} />
               {/* Not found */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -183,17 +196,28 @@ const IndexScenarioComponent: FunctionComponent<{ scenario: ScenarioStore }> = (
 const Index = () => {
   // Standard hooks
   const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState(true);
+  const { t } = useFormatter();
   // Fetching data
   const { scenarioId } = useParams() as { scenarioId: ScenarioStore['scenario_id'] };
   const scenario = useHelper((helper: ScenariosHelper) => helper.getScenario(scenarioId));
   useDataLoader(() => {
-    dispatch(fetchScenario(scenarioId));
+    setLoading(true);
+    dispatch(fetchScenario(scenarioId)).finally(() => setLoading(false));
   });
 
   const scenarioInjectContext = injectContextForScenario(scenario);
 
-  if (!scenario) {
+  if (loading) {
     return <Loader />;
+  }
+  if (!loading && !scenario) {
+    return (
+      <Alert severity="warning">
+        <AlertTitle>{t('Warning')}</AlertTitle>
+        {t('Scenario is currently unavailable or you do not have sufficient permissions to access it.')}
+      </Alert>
+    );
   }
   return (
     <InjectContext.Provider value={scenarioInjectContext}>

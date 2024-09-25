@@ -6,6 +6,7 @@ import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import io.openbas.annotation.Queryable;
 import io.openbas.database.audit.ModelBaseListener;
+import io.openbas.database.model.Endpoint.PLATFORM_TYPE;
 import io.openbas.helper.MonoIdDeserializer;
 import io.openbas.helper.MultiIdListDeserializer;
 import io.openbas.helper.MultiIdSetDeserializer;
@@ -13,6 +14,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UuidGenerator;
@@ -56,20 +58,22 @@ public class Payload implements Base {
   @Setter(NONE)
   private String type;
 
-  @Queryable(searchable = true, sortable = true)
+  @Queryable(filterable = true, searchable = true, sortable = true)
   @Column(name = "payload_name")
   @JsonProperty("payload_name")
   @NotBlank
   private String name;
 
+  @Queryable(filterable = true, sortable = true)
   @Column(name = "payload_description")
   @JsonProperty("payload_description")
   private String description;
 
+  @Queryable(filterable = true, searchable = true)
   @Type(StringArrayType.class)
   @Column(name = "payload_platforms", columnDefinition = "text[]")
   @JsonProperty("payload_platforms")
-  private String[] platforms = new String[0];
+  private PLATFORM_TYPE[] platforms = new PLATFORM_TYPE[0];
 
   @Setter
   @ManyToMany(fetch = FetchType.EAGER)
@@ -78,7 +82,7 @@ public class Payload implements Base {
           inverseJoinColumns = @JoinColumn(name = "attack_pattern_id"))
   @JsonSerialize(using = MultiIdListDeserializer.class)
   @JsonProperty("payload_attack_patterns")
-  @Queryable(searchable = true, filterable = true, property = "externalId")
+  @Queryable(filterable = true, searchable = true, dynamicValues = true, path = "attackPatterns.id")
   private List<AttackPattern> attackPatterns = new ArrayList<>();
 
   @Setter
@@ -90,6 +94,11 @@ public class Payload implements Base {
   @Column(name = "payload_cleanup_command")
   @JsonProperty("payload_cleanup_command")
   private String cleanupCommand;
+
+  @Getter
+  @Column(name = "payload_elevation_required")
+  @JsonProperty("payload_elevation_required")
+  private boolean elevationRequired;
 
   @Setter
   @Type(JsonType.class)
@@ -108,15 +117,19 @@ public class Payload implements Base {
   @JsonProperty("payload_external_id")
   private String externalId;
 
+  @Queryable(filterable = true, sortable = true)
   @Setter
   @Column(name = "payload_source")
+  @Enumerated(EnumType.STRING)
   @JsonProperty("payload_source")
-  private String source;
+  private PAYLOAD_SOURCE source;
 
+  @Queryable(filterable = true)
   @Setter
   @Column(name = "payload_status")
+  @Enumerated(EnumType.STRING)
   @JsonProperty("payload_status")
-  private String status;
+  private PAYLOAD_STATUS status;
 
   // -- COLLECTOR --
 
@@ -128,7 +141,7 @@ public class Payload implements Base {
 
   // -- TAG --
 
-  @Queryable(sortable = true)
+  @Queryable(filterable = true, dynamicValues = true)
   @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(name = "payloads_tags",
       joinColumns = @JoinColumn(name = "payload_id"),
@@ -144,6 +157,7 @@ public class Payload implements Base {
   @NotNull
   private Instant createdAt = now();
 
+  @Queryable(filterable = true, sortable = true)
   @Column(name = "payload_updated_at")
   @JsonProperty("payload_updated_at")
   @NotNull
@@ -151,7 +165,7 @@ public class Payload implements Base {
 
   @JsonProperty("payload_collector_type")
   private String getCollectorType() {
-    return this.getCollector() != null ? this.getCollector().getType() : null;
+    return this.collector != null ? this.collector.getType() : null;
   }
 
   @Override

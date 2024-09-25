@@ -1,18 +1,37 @@
-import { createContext } from 'react';
+import { createContext, ReactElement } from 'react';
 import type { ArticleStore, FullArticleStore } from '../../../actions/channels/Article';
 import type {
   ArticleCreateInput,
   ArticleUpdateInput,
+  Evaluation,
+  EvaluationInput,
+  ImportTestSummary,
   Inject,
   InjectsImportInput,
+  InjectTestStatus,
+  LessonsAnswer,
+  LessonsAnswerCreateInput,
+  LessonsCategory,
+  LessonsCategoryCreateInput,
+  LessonsCategoryTeamsInput,
+  LessonsCategoryUpdateInput,
+  LessonsQuestion,
+  LessonsQuestionCreateInput,
+  LessonsQuestionUpdateInput,
+  LessonsSendInput,
+  Objective,
+  ObjectiveInput,
+  Report,
+  ReportInput,
+  SearchPaginationInput,
   Team,
   TeamCreateInput,
   Variable,
   VariableInput,
-  ImportTestSummary,
 } from '../../../utils/api-types';
 import type { UserStore } from '../teams/players/Player';
-import type { InjectStore } from '../../../actions/injects/Inject';
+import type { InjectOutputType, InjectStore } from '../../../actions/injects/Inject';
+import { Page } from '../../../components/common/queryable/Page';
 
 export type PermissionsContextType = {
   permissions: { readOnly: boolean, canWrite: boolean, isRunning: boolean }
@@ -43,6 +62,12 @@ export type VariableContextType = {
   onDeleteVariable: (variable: Variable) => void,
 };
 
+export type ReportContextType = {
+  onDeleteReport: (report: Report) => void,
+  onUpdateReport: (reportId: Report['report_id'], report: ReportInput) => void
+  renderReportForm: (onSubmitForm: (data: ReportInput) => void, onHandleCancel: () => void, report: Report) => ReactElement,
+};
+
 export type TeamContextType = {
   onAddUsersTeam: (teamId: Team['team_id'], userIds: UserStore['user_id'][]) => Promise<void>,
   onRemoveUsersTeam: (teamId: Team['team_id'], userIds: UserStore['user_id'][]) => Promise<void>,
@@ -55,25 +80,44 @@ export type TeamContextType = {
 };
 
 export type InjectContextType = {
-  onAddInject: (inject: Inject) => Promise<{ result: string }>,
-  onUpdateInject: (injectId: Inject['inject_id'], inject: Inject) => Promise<{ result: string }>,
-  onUpdateInjectTrigger?: (injectId: Inject['inject_id']) => void,
+  searchInjects: (input: SearchPaginationInput) => Promise<{ data: Page<InjectOutputType> }>,
+  onAddInject: (inject: Inject) => Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }>,
+  onUpdateInject: (injectId: Inject['inject_id'], inject: Inject) => Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }>,
+  onUpdateInjectTrigger?: (injectId: Inject['inject_id']) => Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }>,
   onUpdateInjectActivation: (injectId: Inject['inject_id'], injectEnabled: { inject_enabled: boolean }) => Promise<{
     result: string,
     entities: { injects: Record<string, InjectStore> }
   }>,
-  onInjectDone?: (injectId: Inject['inject_id']) => void,
-  onDeleteInject: (injectId: Inject['inject_id']) => void,
+  onInjectDone?: (injectId: Inject['inject_id']) => Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }>,
+  onDeleteInject: (injectId: Inject['inject_id']) => Promise<void>,
   onImportInjectFromXls?: (importId: string, input: InjectsImportInput) => Promise<ImportTestSummary>
   onDryImportInjectFromXls?: (importId: string, input: InjectsImportInput) => Promise<ImportTestSummary>
+  onBulkDeleteInjects: (injectIds: string[]) => void
+  bulkTestInjects: (injectIds: string[]) => Promise<{ uri: string, data: InjectTestStatus[] }>
 };
-
-export type AtomicTestingContextType = {
-  onAddAtomicTesting: (inject: Inject) => Promise<{ result: string }>,
+export type LessonContextType = {
+  onApplyLessonsTemplate: (data: string) => Promise<LessonsCategory[]>,
+  onResetLessonsAnswers?: () => Promise<LessonsCategory[]>,
+  onEmptyLessonsCategories: () => Promise<LessonsCategory[]>,
+  onUpdateSourceLessons: (data: boolean) => Promise<{ result: string }>,
+  onSendLessons?: (data: LessonsSendInput) => void,
+  onAddLessonsCategory: (data: LessonsCategoryCreateInput) => Promise<LessonsCategory>,
+  onDeleteLessonsCategory: (data: string) => void,
+  onUpdateLessonsCategory: (lessonCategoryId: string, data: LessonsCategoryUpdateInput) => Promise<LessonsCategory>,
+  onUpdateLessonsCategoryTeams: (lessonCategoryId: string, data: LessonsCategoryTeamsInput) => Promise<LessonsCategory>,
+  onDeleteLessonsQuestion: (lessonsCategoryId: string, lessonsQuestionId: string) => void,
+  onUpdateLessonsQuestion: (lessonsCategoryId: string, lessonsQuestionId: string, data: LessonsQuestionUpdateInput) => Promise<LessonsQuestion>,
+  onAddLessonsQuestion: (lessonsCategoryId: string, data: LessonsQuestionCreateInput) => Promise<LessonsQuestion>,
+  onAddObjective: (data: ObjectiveInput) => Promise<Objective>,
+  onUpdateObjective: (objectiveId: string, data: ObjectiveInput) => Promise<Objective>,
+  onDeleteObjective: (objectiveId: string) => void,
+  onAddEvaluation: (objectiveId: string, data: EvaluationInput) => Promise<Evaluation>,
+  onUpdateEvaluation: (objectiveId: string, evaluationId: string, data: EvaluationInput) => Promise<Evaluation>,
+  onFetchEvaluation: (objectiveId: string) => Promise<Evaluation[]>,
 };
-
-export type AtomicTestingResultContextType = {
-  onLaunchAtomicTesting: () => void;
+export type ViewLessonContextType = {
+  onAddLessonsAnswers?: (questionCategory: string, lessonsQuestionId: string, answerData: LessonsAnswerCreateInput) => Promise<LessonsAnswer>,
+  onFetchPlayerLessonsAnswers?: () => Promise<LessonsAnswer[]>,
 };
 
 export const PermissionsContext = createContext<PermissionsContextType>({
@@ -99,7 +143,11 @@ export const ChallengeContext = createContext<ChallengeContextType>({
   },
 });
 export const DocumentContext = createContext<DocumentContextType>({
-  onInitDocument(): { document_tags: { id: string; label: string }[]; document_exercises: { id: string; label: string }[]; document_scenarios: { id: string; label: string }[] } {
+  onInitDocument(): {
+    document_tags: { id: string; label: string }[];
+    document_exercises: { id: string; label: string }[];
+    document_scenarios: { id: string; label: string }[]
+  } {
     return { document_exercises: [], document_scenarios: [], document_tags: [] };
   },
 });
@@ -109,6 +157,14 @@ export const VariableContext = createContext<VariableContextType>({
   onDeleteVariable(_variable: Variable): void {
   },
   onEditVariable(_variable: Variable, _data: VariableInput): void {
+  },
+});
+export const ReportContext = createContext<ReportContextType>(<ReportContextType>{
+  onDeleteReport(_report: Report): void {
+  },
+  onUpdateReport(_reportId: Report['report_id'], _report: ReportInput): void {
+  },
+  renderReportForm(_onSubmit: (data: ReportInput) => void, _onCancel: () => void, _report: Report): void {
   },
 });
 export const TeamContext = createContext<TeamContextType>({
@@ -121,15 +177,19 @@ export const TeamContext = createContext<TeamContextType>({
     });
   },
 });
-
 export const InjectContext = createContext<InjectContextType>({
-  onAddInject(_inject: Inject): Promise<{ result: string }> {
-    return Promise.resolve({ result: '' });
+  searchInjects(_: SearchPaginationInput): Promise<{ data: Page<InjectOutputType> }> {
+    return new Promise<{ data: Page<InjectOutputType> }>(() => {
+    });
   },
-  onUpdateInject(_injectId: Inject['inject_id'], _inject: Inject): Promise<{ result: string }> {
-    return Promise.resolve({ result: '' });
+  onAddInject(_inject: Inject): Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }> {
+    return Promise.resolve({ result: '', entities: { injects: {} } });
   },
-  onUpdateInjectTrigger(_injectId: Inject['inject_id']): void {
+  onUpdateInject(_injectId: Inject['inject_id'], _inject: Inject): Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }> {
+    return Promise.resolve({ result: '', entities: { injects: {} } });
+  },
+  onUpdateInjectTrigger(_injectId: Inject['inject_id']): Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }> {
+    return Promise.resolve({ result: '', entities: { injects: {} } });
   },
   onUpdateInjectActivation(_injectId: Inject['inject_id'], _injectEnabled: { inject_enabled: boolean }): Promise<{
     result: string,
@@ -137,9 +197,11 @@ export const InjectContext = createContext<InjectContextType>({
   }> {
     return Promise.resolve({ result: '', entities: { injects: {} } });
   },
-  onInjectDone(_injectId: Inject['inject_id']): void {
+  onInjectDone(_injectId: Inject['inject_id']): Promise<{ result: string, entities: { injects: Record<string, InjectStore> } }> {
+    return Promise.resolve({ result: '', entities: { injects: {} } });
   },
-  onDeleteInject(_injectId: Inject['inject_id']): void {
+  onDeleteInject(_injectId: Inject['inject_id']): Promise<void> {
+    return Promise.resolve();
   },
   onImportInjectFromXls(_importId: string, _input: InjectsImportInput): Promise<ImportTestSummary> {
     return new Promise<ImportTestSummary>(() => {
@@ -149,15 +211,86 @@ export const InjectContext = createContext<InjectContextType>({
     return new Promise<ImportTestSummary>(() => {
     });
   },
+  onBulkDeleteInjects(_injectIds: string[]): void {
+  },
+  bulkTestInjects(_injectIds: string[]): Promise<{ uri: string, data: InjectTestStatus[] }> {
+    return new Promise<{ uri: string, data: InjectTestStatus[] }>(() => {
+    });
+  },
 });
-
-export const AtomicTestingContext = createContext<AtomicTestingContextType>({
-  onAddAtomicTesting(_inject: Inject): Promise<{ result: string }> {
+export const LessonContext = createContext<LessonContextType>({
+  onApplyLessonsTemplate(_data: string): Promise<LessonsCategory[]> {
+    return new Promise<LessonsCategory[]>(() => {
+    });
+  },
+  onResetLessonsAnswers(): Promise<LessonsCategory[]> {
+    return new Promise<LessonsCategory[]>(() => {
+    });
+  },
+  onEmptyLessonsCategories(): Promise<LessonsCategory[]> {
+    return new Promise<LessonsCategory[]>(() => {
+    });
+  },
+  onUpdateSourceLessons(_data: boolean): Promise<{ result: string }> {
     return Promise.resolve({ result: '' });
   },
-});
-
-export const AtomicTestingResultContext = createContext<AtomicTestingResultContextType>({
-  onLaunchAtomicTesting: () => {
+  onSendLessons(_data: LessonsSendInput): void {
+  },
+  onAddLessonsCategory(_data: LessonsCategoryCreateInput): Promise<LessonsCategory> {
+    return new Promise<LessonsCategory>(() => {
+    });
+  },
+  onDeleteLessonsCategory(_data: string): void {
+  },
+  onUpdateLessonsCategory(_lessonCategoryId: string, _data: LessonsCategoryUpdateInput): Promise<LessonsCategory> {
+    return new Promise<LessonsCategory>(() => {
+    });
+  },
+  onUpdateLessonsCategoryTeams(_lessonCategoryId: string, _data: LessonsCategoryTeamsInput): Promise<LessonsCategory> {
+    return new Promise<LessonsCategory>(() => {
+    });
+  },
+  onDeleteLessonsQuestion(_lessonsCategoryId: string, _lessonsQuestionId: string): void {
+  },
+  onUpdateLessonsQuestion(_lessonsCategoryId: string, _lessonsQuestionId: string, _data: LessonsQuestionUpdateInput): Promise<LessonsQuestion> {
+    return new Promise<LessonsQuestion>(() => {
+    });
+  },
+  onAddLessonsQuestion(_lessonsCategoryId: string, _data: LessonsQuestionCreateInput): Promise<LessonsQuestion> {
+    return new Promise<LessonsQuestion>(() => {
+    });
+  },
+  onAddObjective(_data: ObjectiveInput): Promise<Objective> {
+    return new Promise<Objective>(() => {
+    });
+  },
+  onUpdateObjective(_objectiveId: string, _data: ObjectiveInput): Promise<Objective> {
+    return new Promise<Objective>(() => {
+    });
+  },
+  onDeleteObjective(_objectiveId: string): void {
+  },
+  onAddEvaluation(_objectiveId: string, _data: EvaluationInput): Promise<Evaluation> {
+    return new Promise<Evaluation>(() => {
+    });
+  },
+  onUpdateEvaluation(_objectiveId: string, _evaluationId: string, _data: EvaluationInput): Promise<Evaluation> {
+    return new Promise<Evaluation>(() => {
+    });
+  },
+  onFetchEvaluation(_objectiveId: string): Promise<Evaluation[]> {
+    return new Promise<Evaluation[]>(() => {
+    });
   },
 });
+export const ViewLessonContext = createContext<ViewLessonContextType>({
+  onAddLessonsAnswers(_questionCategory: string, _lessonsQuestionId: string, _answerData: LessonsAnswerCreateInput): Promise<LessonsAnswer> {
+    return new Promise<LessonsAnswer>(() => {
+    });
+  },
+  onFetchPlayerLessonsAnswers(): Promise<LessonsAnswer[]> {
+    return new Promise<LessonsAnswer[]>(() => {
+    });
+  },
+});
+export const ViewModeContext = createContext('list');

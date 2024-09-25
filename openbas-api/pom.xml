@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>io.openbas</groupId>
         <artifactId>openbas-platform</artifactId>
-        <version>1.4.0</version>
+        <version>1.6.1</version>
     </parent>
 
     <artifactId>openbas-api</artifactId>
@@ -17,12 +17,13 @@
         <bcpg-jdk15on.version>1.70</bcpg-jdk15on.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <commons-email.version>1.5</commons-email.version>
-        <flyway.version>9.0.3</flyway.version>
         <opensaml.version>4.3.2</opensaml.version>
         <springdoc.version>2.6.0</springdoc.version>
         <springdoc-plugin.version>1.4</springdoc-plugin.version>
         <cron-utils.version>9.2.1</cron-utils.version>
         <apache-poi.version>5.3.0</apache-poi.version>
+        <opentelemetry.version>1.42.0</opentelemetry.version>
+        <opentelemetry-semconv.version>1.27.0-alpha</opentelemetry-semconv.version>
     </properties>
 
     <profiles>
@@ -31,11 +32,23 @@
         </profile>
     </profiles>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>io.openbas</groupId>
             <artifactId>openbas-framework</artifactId>
-            <version>1.4.0</version>
+            <version>1.6.1</version>
         </dependency>
         <dependency>
             <groupId>com.rabbitmq</groupId>
@@ -177,6 +190,24 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>${apache-poi.version}</version>
+        </dependency>
+        <!-- OpenTelemetry -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry.semconv</groupId>
+            <artifactId>opentelemetry-semconv</artifactId>
+            <version>${opentelemetry-semconv.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-exporter-otlp</artifactId>
         </dependency>
         <!-- TEST -->
         <dependency>

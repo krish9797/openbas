@@ -15,7 +15,7 @@ import AssetStatus from '../AssetStatus';
 import Breadcrumbs from '../../../../components/Breadcrumbs';
 import PaginationComponent from '../../../../components/common/pagination/PaginationComponent';
 import SortHeadersComponent from '../../../../components/common/pagination/SortHeadersComponent';
-import { initSorting } from '../../../../components/common/pagination/Page';
+import { initSorting } from '../../../../components/common/queryable/Page';
 import type { SearchPaginationInput } from '../../../../utils/api-types';
 import { searchEndpoints } from '../../../../actions/assets/endpoint-actions';
 import PlatformIcon from '../../../../components/PlatformIcon';
@@ -23,6 +23,7 @@ import type { ExecutorHelper } from '../../../../actions/executors/executor-help
 import useDataLoader from '../../../../utils/hooks/useDataLoader';
 import { fetchExecutors } from '../../../../actions/Executor';
 import { fetchTags } from '../../../../actions/Tag';
+import { buildSearchPagination } from '../../../../components/common/queryable/QueryableUtils';
 
 const useStyles = makeStyles(() => ({
   itemHead: {
@@ -61,7 +62,7 @@ const inlineStyles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
   },
-  endpoint_executor: {
+  asset_executor: {
     width: '15%',
     display: 'flex',
     alignItems: 'center',
@@ -102,16 +103,16 @@ const Endpoints = () => {
     { field: 'asset_name', label: 'Name', isSortable: true },
     { field: 'endpoint_platform', label: 'Platform', isSortable: true },
     { field: 'endpoint_arch', label: 'Architecture', isSortable: true },
-    { field: 'endpoint_executor', label: 'Executor', isSortable: true },
+    { field: 'asset_executor', label: 'Executor', isSortable: true },
     { field: 'asset_tags', label: 'Tags', isSortable: true },
     { field: 'asset_status', label: 'Status', isSortable: false },
   ];
 
   const [endpoints, setEndpoints] = useState<EndpointStore[]>([]);
-  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>({
+  const [searchPaginationInput, setSearchPaginationInput] = useState<SearchPaginationInput>(buildSearchPagination({
     sorts: initSorting('asset_name'),
     textSearch: search,
-  });
+  }));
 
   // Export
   const exportProps = {
@@ -181,7 +182,7 @@ const Endpoints = () => {
                     <div className={classes.bodyItem} style={inlineStyles.endpoint_arch}>
                       {endpoint.endpoint_arch}
                     </div>
-                    <div className={classes.bodyItem} style={inlineStyles.endpoint_executor}>
+                    <div className={classes.bodyItem} style={inlineStyles.asset_executor}>
                       {executor && (
                       <img
                         src={`/api/images/executors/${executor.executor_type}`}
